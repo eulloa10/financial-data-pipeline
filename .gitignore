@@ -257,3 +257,21 @@ airflow-build-dockerfile*
 
 /data
 *.pyc
+
+# Ignore environment files (all .env files)
+.env
+.env.*
+**/*.env
+
+# Ignore .terraform.lock.hcl (Terraform lock file)
+.terraform.lock.hcl
+
+# Ignore Localstack temp/cache files
+.localstack/
+
+# Pytest cache
+.pytest_cache/
+
+# Ignore specific IDE configurations (VS Code, PyCharm)
+.idea/
+.vscode/
