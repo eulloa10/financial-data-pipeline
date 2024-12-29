@@ -166,9 +166,6 @@ scripts/ci/kubernetes/docker/requirements.txt
 # Provider-related ignores
 /airflow/providers/__init__.py
 
-# LocalStack temp/cache
-.localstack/
-
 # Pytest cache
 .pytest_cache/
 
