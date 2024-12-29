@@ -1,10 +1,13 @@
-# resource "aws_s3_bucket" "fred_glue_scripts_bucket" {
-#   bucket = var.glue_scripts_bucket
-# }
+module "extract_job" {
+  source = "./modules/extract_job"
 
-# resource "aws_s3_bucket" "fred_data_bucket" {
-#   bucket = var.fred_data_bucket
-# }
+  project             = var.project
+  region              = var.region
+  data_lake_name      = var.data_lake_name
+  glue_scripts_bucket = var.glue_scripts_bucket
+  python_version      = var.python_version
+  timeout             = var.timeout
+}
 
 # module "extract_fred_data_DGS10" {
 #   source = "./modules/extract_job"

@@ -7,8 +7,12 @@
 #   description = "AWS secret key"
 #   type = string
 # }
+variable "project" {
+  description = "Project name"
+  type = string
+}
 
-variable "aws_region" {
+variable "region" {
   description = "AWS region"
   type = string
 }
@@ -18,8 +22,8 @@ variable "aws_user" {
   type = string
 }
 
-variable "fred_data_bucket" {
-  description = "S3 bucket for fred data"
+variable "data_lake_name" {
+  description = "S3 bucket for fred data lake"
   type = string
 }
 
@@ -38,10 +42,27 @@ variable "number_of_workers" {
   default = 2
 }
 
+variable "terraform_bucket" {
+  description = "Terraform state bucket"
+  type = string
+}
+
 variable "worker_type" {
   description = "The type of worker to use"
   type = string
   default = "G.1X"
+}
+
+variable "python_version" {
+  description = "Python version"
+  type = number
+  default = 3
+}
+
+variable "timeout" {
+  description = "Timeout for glue job"
+  type = number
+  default = 5
 }
 
 

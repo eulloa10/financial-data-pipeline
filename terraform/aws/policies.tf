@@ -15,8 +15,8 @@ data "aws_iam_policy_document" "terraform_policy" {
     resources = [
       "arn:aws:s3:::${var.glue_scripts_bucket}",
       "arn:aws:s3:::${var.glue_scripts_bucket}/*",
-      "arn:aws:s3:::${var.fred_data_bucket}",
-      "arn:aws:s3:::${var.fred_data_bucket}/*",
+      "arn:aws:s3:::${var.data_lake_name}",
+      "arn:aws:s3:::${var.data_lake_name}/*",
     ]
   }
 
