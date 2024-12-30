@@ -7,6 +7,7 @@ module "extract_job" {
   glue_scripts_bucket = var.glue_scripts_bucket
   python_version      = var.python_version
   timeout             = var.timeout
+  fred_api_key        = var.fred_api_key
 }
 
 # module "extract_fred_data_DGS10" {

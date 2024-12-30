@@ -65,7 +65,11 @@ variable "timeout" {
   default = 5
 }
 
-
+variable "fred_api_key" {
+  description = "API key"
+  type = string
+  sensitive = true
+}
 
 # variable "transform_glue_scripts" {
 #   type = map(object({

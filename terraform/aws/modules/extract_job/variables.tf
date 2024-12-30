@@ -46,3 +46,21 @@ variable "timeout" {
   type = number
   default = 5
 }
+
+variable "fred_api_key" {
+  description = "API key for FRED"
+  type = string
+  sensitive = true
+}
+
+variable "observation_start_date" {
+  description = "Start date for FRED data extraction"
+  type = string
+  default = "2024-12-01"
+}
+
+variable "observation_end_date" {
+  description = "End date for FRED data extraction"
+  type = string
+  default = "2024-12-31"
+}
