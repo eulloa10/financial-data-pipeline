@@ -4,8 +4,6 @@
 
 Investors need quick, actionable insights on key financial indicators without sifting through an overwhelming amount of data. While FRED provides a vast library of metrics and graphs, it lacks the ability to focus on a customized set of indicators in a single view. This project automates the extraction of selected financial data from the FRED API, processes it for analysis, and delivers a streamlined dashboard and reports tailored to the investor’s specific interests, enabling efficient trend monitoring and informed decision-making.
 
-**NOTE: This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.**
-
 ### Key Financial and Economic Indicators Tracked:
 - Case-Shiller Index
 - Consumer Confidence
@@ -19,6 +17,7 @@ Investors need quick, actionable insights on key financial indicators without si
 - Unemployment Rate
 - Yield Curve
 
+**NOTE: This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.**
 ---
 
 ## Project Overview
