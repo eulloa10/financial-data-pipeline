@@ -1,6 +1,6 @@
 # Financial and Economic Indicators Tracking and Analysis
 
-## Problem Statement
+## Background
 
 Tracking and analyzing key financial and economic indicators is essential for informed investment decisions, but manually collecting, processing, and analyzing this data is time-consuming, error-prone, and inefficient. While FRED provides individual indicator visualizations, it lacks an integrated view of multiple indicators, limiting the ability to analyze trends and relationships. This project addresses these challenges by automating the extraction of financial and economic data from the FRED API, transforming it for analysis, and visualizing it through an intuitive dashboard, providing investors with a comprehensive, timely, and accurate view of key financial trends to inform better investment decisions.
 
@@ -21,14 +21,15 @@ Tracking and analyzing key financial and economic indicators is essential for in
 
 ## Project Overview
 
-This project builds an automated data pipeline to track financial and economic indicators over time. The data will be ingested from the FRED API, stored in an S3-based data lake, and then moved to a data warehouse where it will be transformed and optimized for reporting and analysis. The project culminates in an interactive dashboard that visualizes the key metrics, helping investors monitor trends and make data-driven investment decisions.
+This project builds an automated data pipeline to track financial and economic indicators over time. The data is ingested from the FRED API, stored in an S3-based data lake, and then transformed across multiple layers (bronze, silver, gold). Finally, the transformed data is moved to a data warehouse for analysis and reporting. The project culminates in an interactive dashboard that visualizes key metrics, helping investors monitor trends and make data-driven investment decisions.
 
 The core components of the project include:
-- **Data Ingestion**: Automatically fetching data from external APIs (FRED) and storing it in Amazon S3.
-- **Data Transformation**: Using AWS Glue or custom SQL scripts to clean and prepare the data.
-- **Data Warehouse**: Storing the transformed data in Amazon Redshift or RDS.
+- **Data Ingestion**: Fetching data from external APIs (FRED) and storing it in Amazon S3.
+- **Data Transformation**: Using AWS Glue scripts to clean and prepare the data across the various layers of the data lake.
+- **Data Warehouse**: Storing the transformed data in Amazon RDS for further analysis and reporting.
 - **Dashboard**: Visualizing the financial indicators using Apache Superset, Tableau, or Power BI.
-- **Automation**: Workflow orchestration with Apache Airflow to manage the data pipeline and ensure regular updates.
+- **Automation**: Orchestrating the workflow with Apache Airflow to manage the data pipeline and ensure regular updates.
+- **Infrastructure as Code**: Using Terraform to automate the provisioning and management of AWS resources, including S3 buckets, Glue jobs, and RDS instances
 
 ---
 
@@ -36,12 +37,12 @@ The core components of the project include:
 
 - **Cloud**: Amazon Web Services (AWS)
   - **S3**: Data storage (Data Lake)
-  - **Redshift/RDS**: Data warehouse
+  - **RDS**: Data warehouse
   - **Glue**: Data transformation
   - **Lambda**: Serverless compute (optional)
   - **SES**: Sending reports via email (optional)
 - **Orchestration**: Apache Airflow for workflow automation and scheduling
-- **Data Transformation**: AWS Glue, DBT, or custom Python scripts
+- **Data Transformation**: AWS Glue
 - **Dashboard**: Apache Superset for data visualization
 - **Infrastructure as Code**: Terraform for provisioning cloud resources
 
