@@ -26,8 +26,8 @@ This project builds an automated data pipeline to track financial and economic i
 The core components of the project include:
 - **Data Ingestion**: Fetching data from external APIs (FRED) and storing it in Amazon S3.
 - **Data Transformation**: Using AWS Glue scripts to clean and prepare the data across the various layers of the data lake.
-- **Data Warehouse**: Storing the transformed data in Amazon RDS for further analysis and reporting.
-- **Dashboard**: Visualizing the financial indicators using Apache Superset, Tableau, or Power BI.
+- **Data Warehouse**: Storing the transformed data in Amazon Redshift for further analysis and reporting.
+- **Dashboard**: Visualizing the financial indicators using Data Studio or Metabase.
 - **Automation**: Orchestrating the workflow with Apache Airflow to manage the data pipeline and ensure regular updates.
 - **Infrastructure as Code**: Using Terraform to automate the provisioning and management of AWS resources, including S3 buckets, Glue jobs, and RDS instances
 
@@ -37,7 +37,7 @@ The core components of the project include:
 
 - **Cloud**: Amazon Web Services (AWS)
   - **S3**: Data storage (Data Lake)
-  - **RDS**: Data warehouse
+  - **Redshift**: Data warehouse
   - **Glue**: Data transformation
   - **Lambda**: Serverless compute (optional)
   - **SES**: Sending reports via email (optional)
