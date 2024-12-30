@@ -47,6 +47,12 @@ The core components of the project include:
 
 ---
 
+## Architecture
+
+![Architecture Diagram](https://github.com/eulloa10/financial-data-pipeline/blob/main/fred_fdp_architecture_diagram.png?raw=true)
+
+---
+
 ## Setup and Installation
 
 ### Prerequisites
