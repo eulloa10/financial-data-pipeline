@@ -2,7 +2,9 @@
 
 ## Background
 
-Tracking and analyzing key financial and economic indicators is essential for informed investment decisions, but manually collecting, processing, and analyzing this data is time-consuming, error-prone, and inefficient. While FRED provides individual indicator visualizations, it lacks an integrated view of multiple indicators, limiting the ability to analyze trends and relationships. This project addresses these challenges by automating the extraction of financial and economic data from the FRED API, transforming it for analysis, and visualizing it through an intuitive dashboard, providing investors with a comprehensive, timely, and accurate view of key financial trends to inform better investment decisions.
+Investors need quick, actionable insights on key financial indicators without sifting through an overwhelming amount of data. While FRED provides a vast library of metrics and graphs, it lacks the ability to focus on a customized set of indicators in a single view. This project automates the extraction of selected financial data from the FRED API, processes it for analysis, and delivers a streamlined dashboard and reports tailored to the investor’s specific interests, enabling efficient trend monitoring and informed decision-making.
+
+**NOTE: This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.**
 
 ### Key Financial and Economic Indicators Tracked:
 - Case-Shiller Index
