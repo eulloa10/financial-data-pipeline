@@ -47,6 +47,12 @@ variable "timeout" {
   default = 5
 }
 
+variable "long_timeout" {
+  description = "Timeout for glue job"
+  type = number
+  default = 30
+}
+
 variable "fred_api_key" {
   description = "API key for FRED"
   type = string

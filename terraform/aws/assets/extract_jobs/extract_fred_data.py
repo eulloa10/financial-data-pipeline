@@ -1,5 +1,4 @@
 import boto3
-import json
 import requests
 from datetime import datetime, timezone
 import sys
@@ -34,7 +33,7 @@ fred_api_key = args["API_KEY"]
 
 job.init(args["JOB_NAME"], args)
 
-indicator_list = ["DGS10", "EFFR" ]
+indicator_list = ["DGS10"]
 
 # indicator_list = ["DGS10", "EFFR", "CSUSHPINSA", "UNRATE", "CPIAUCSL", "PCE", "JTSJOL", "JTSHIR", "JTSTSR", "PSAVERT", "CSCICP03USM665S"]
 
@@ -80,12 +79,18 @@ for indicator in indicator_list:
 
                 ingestion_timestamp = datetime.now(timezone.utc).isoformat()
 
-                df = spark.read.json(sc.parallelize([json.dumps(data)]))
+                # Add additional columns to each observation
+                for observation in observations:
+                    observation['indicator'] = indicator
+                    observation['observation_year'] = observation_year
+                    observation['observation_month'] = observation_month
+                    observation['ingestion_timestamp'] = ingestion_timestamp
 
-                df = df.withColumn("ingestion_timestamp", lit(ingestion_timestamp))
-                df = df.withColumn("indicator", lit(indicator))
-                df = df.withColumn("observation_year", lit(observation_year))
-                df = df.withColumn("observation_month", lit(observation_month))
+                # Create a Spark DataFrame from the list of dictionaries (observations)
+                df = spark.createDataFrame(observations)
+
+                # Coalesce to 1 partition to ensure only one file per partition
+                df = df.coalesce(1)
 
                 glueContext.write_dynamic_frame.from_options(
                     frame=glueContext.create_dynamic_frame.from_df(df, glueContext.spark_session, "fred_data"),
