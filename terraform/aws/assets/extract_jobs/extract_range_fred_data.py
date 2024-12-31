@@ -26,11 +26,11 @@ glueContext = GlueContext(sc)
 spark = glueContext.spark_session
 job = Job(glueContext)
 
-args = getResolvedOptions(sys.argv, ["JOB_NAME", "raw_data_bucket", "target_path", "start_date", "end_date", "API_KEY"])
-bucket_name = args["raw_data_bucket"]
-target_path = args["target_path"]
-obs_start_date_str = args["start_date"]
-obs_end_date_str = args["end_date"]
+args = getResolvedOptions(sys.argv, ["JOB_NAME", "RAW_DATA_BUCKET", "TARGET_PATH", "START_DATE", "END_DATE", "API_KEY"])
+bucket_name = args["RAW_DATA_BUCKET"]
+target_path = args["TARGET_PATH"]
+obs_start_date_str = args["START_DATE"]
+obs_end_date_str = args["END_DATE"]
 fred_api_key = args["API_KEY"]
 
 job.init(args["JOB_NAME"], args)

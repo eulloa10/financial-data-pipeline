@@ -1,5 +1,5 @@
 resource "aws_glue_job" "fred_ingestion_monthly_etl_job" {
-  name     = "${var.project}-fred_extract_month_job"
+  name     = "${var.project}-fred-extract-month-job"
   role_arn = aws_iam_role.glue_role.arn
   glue_version = var.glue_version
 
@@ -10,10 +10,10 @@ resource "aws_glue_job" "fred_ingestion_monthly_etl_job" {
   }
 
   default_arguments = {
-    "--raw_data_bucket"   = "${var.project}-${var.data_lake_name}"
-    "--target_path"     = "raw_data"
-    "--start_date"      = var.observation_start_date
-    "--end_date"        = var.observation_end_date
+    "--RAW_DATA_BUCKET"   = "${var.project}-${var.data_lake_name}"
+    "--TARGET_PATH"     = "raw_data"
+    "--START_DATE"      = var.observation_start_date
+    "--END_DATE"        = var.observation_end_date
     "--API_KEY"         = var.fred_api_key
   }
 
@@ -23,7 +23,7 @@ resource "aws_glue_job" "fred_ingestion_monthly_etl_job" {
 }
 
 resource "aws_glue_job" "fred_ingestion_range_etl_job" {
-  name     = "${var.project}-fred_extract_range_job"
+  name     = "${var.project}-fred-extract-range-job"
   role_arn = aws_iam_role.glue_role.arn
   glue_version = var.glue_version
 
@@ -34,10 +34,10 @@ resource "aws_glue_job" "fred_ingestion_range_etl_job" {
   }
 
   default_arguments = {
-    "--raw_data_bucket" = "${var.project}-${var.data_lake_name}"
-    "--target_path"     = "raw_data"
-    "--start_date"  = var.observation_start_date
-    "--end_date"    = var.observation_end_date
+    "--RAW_DATA_BUCKET" = "${var.project}-${var.data_lake_name}"
+    "--TARGET_PATH"     = "raw_data"
+    "--START_DATE"  = var.observation_start_date
+    "--END_DATE"    = var.observation_end_date
     "--API_KEY"         = var.fred_api_key
   }
 
