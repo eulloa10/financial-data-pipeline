@@ -5,6 +5,7 @@ import sys
 from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
+from awsglue.dynamicframe import DynamicFrame
 from awsglue.job import Job
 import logging
 from pyspark.sql.functions import lit
@@ -24,18 +25,16 @@ glueContext = GlueContext(sc)
 spark = glueContext.spark_session
 job = Job(glueContext)
 
-args = getResolvedOptions(sys.argv, ["JOB_NAME", "raw_data_bucket", "target_path", "obs_start_date", "obs_end_date", "API_KEY"])
+args = getResolvedOptions(sys.argv, ["JOB_NAME", "raw_data_bucket", "target_path", "start_date", "end_date", "API_KEY"])
 bucket_name = args["raw_data_bucket"]
 target_path = args["target_path"]
-obs_start_date_str = args["obs_start_date"]
-obs_end_date_str = args["obs_end_date"]
+obs_start_date_str = args["start_date"]
+obs_end_date_str = args["end_date"]
 fred_api_key = args["API_KEY"]
 
 job.init(args["JOB_NAME"], args)
 
-indicator_list = ["DGS10"]
-
-# indicator_list = ["DGS10", "EFFR", "CSUSHPINSA", "UNRATE", "CPIAUCSL", "PCE", "JTSJOL", "JTSHIR", "JTSTSR", "PSAVERT", "CSCICP03USM665S"]
+indicator_list = ["DGS10", "EFFR", "CSUSHPINSA", "UNRATE", "CPIAUCSL", "PCE", "JTSJOL", "JTSHIR", "JTSTSR", "PSAVERT", "CSCICP03USM665S"]
 
 try:
     start_date = datetime.strptime(obs_start_date_str, '%Y-%m-%d').date()
@@ -92,11 +91,13 @@ for indicator in indicator_list:
                 # Coalesce to 1 partition to ensure only one file per partition
                 df = df.coalesce(1)
 
+                dynamic_frame = DynamicFrame.fromDF(df, glueContext, "fred_data")
+
                 glueContext.write_dynamic_frame.from_options(
-                    frame=glueContext.create_dynamic_frame.from_df(df, glueContext.spark_session, "fred_data"),
+                    frame=dynamic_frame,
                     connection_type="s3",
                     connection_options={
-                        "path": f"s3://{bucket_name}/{target_path}/indicator={indicator}/observation_year={observation_year}/observation_month={observation_month}/",
+                        "path": f"s3://{bucket_name}/{target_path}",
                         "partitionKeys": ["indicator", "observation_year", "observation_month"]
                     },
                     format="json"
