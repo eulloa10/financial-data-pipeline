@@ -203,3 +203,5 @@ log.txt*
 licenses/LICENSES-ui.txt
 /breeze.exe
 /out
+
+/s3_data
