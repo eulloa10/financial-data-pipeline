@@ -1,11 +1,11 @@
 resource "aws_glue_job" "fred_transform_etl_job" {
   name     = "${var.project}-fred-transform-job"
-  role_arn = aws_iam_role.glue_role.arn
+  role_arn = var.glue_role_arn
   glue_version = var.glue_version
 
   command {
     name="glueetl"
-    script_location = "s3://${aws_s3_bucket.scripts.id}/${aws_s3_object.glue_job_transform_fred_api.id}"
+    script_location = "s3://${var.glue_scripts_bucket}/${aws_s3_object.glue_job_transform_fred_api.id}"
     python_version = var.python_version
   }
 

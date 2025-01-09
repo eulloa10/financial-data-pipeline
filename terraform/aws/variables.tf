@@ -9,27 +9,27 @@
 # }
 variable "project" {
   description = "Project name"
-  type = string
+  type        = string
 }
 
 variable "region" {
   description = "AWS region"
-  type = string
+  type        = string
 }
 
 variable "aws_user" {
   description = "AWS user name"
-  type = string
+  type        = string
 }
 
 variable "data_lake_name" {
   description = "S3 bucket for fred data lake"
-  type = string
+  type        = string
 }
 
 variable "glue_scripts_bucket" {
   description = "S3 bucket for glue scripts"
-  type = string
+  type        = string
 }
 
 variable "glue_version" {
@@ -44,31 +44,31 @@ variable "number_of_workers" {
 
 variable "terraform_bucket" {
   description = "Terraform state bucket"
-  type = string
+  type        = string
 }
 
 variable "worker_type" {
   description = "The type of worker to use"
-  type = string
-  default = "G.1X"
+  type        = string
+  default     = "G.1X"
 }
 
 variable "python_version" {
   description = "Python version"
-  type = number
-  default = 3
+  type        = number
+  default     = 3
 }
 
 variable "timeout" {
   description = "Timeout for glue job"
-  type = number
-  default = 5
+  type        = number
+  default     = 5
 }
 
 variable "fred_api_key" {
   description = "API key"
-  type = string
-  sensitive = true
+  type        = string
+  sensitive   = true
 }
 
 # variable "transform_glue_scripts" {

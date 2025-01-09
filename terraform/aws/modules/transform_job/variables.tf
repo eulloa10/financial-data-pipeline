@@ -70,3 +70,8 @@ variable "observation_end_date" {
   type = string
   default = "2024-12-31"
 }
+
+variable "glue_role_arn" {
+  description = "IAM role ARN for the Glue job"
+  type        = string
+}
