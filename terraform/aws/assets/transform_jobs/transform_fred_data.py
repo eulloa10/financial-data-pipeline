@@ -8,24 +8,26 @@ from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.job import Job
+import boto3
 
+# Logging setup
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
 handler = logging.StreamHandler(sys.stdout)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
-
 if not logger.handlers:
     logger.addHandler(handler)
 
+# Spark and Glue context initialization
 sc = SparkContext()
 glueContext = GlueContext(sc)
 spark = glueContext.spark_session
 
+# Job arguments
 args = getResolvedOptions(sys.argv, [
-                          'JOB_NAME', 'SRC_BUCKET', 'SRC_PREFIX', 'DEST_BUCKET', 'DEST_PREFIX', 'START_DATE', 'END_DATE'])
-
+    'JOB_NAME', 'SRC_BUCKET', 'SRC_PREFIX', 'DEST_BUCKET', 'DEST_PREFIX', 'START_DATE', 'END_DATE'
+])
 job = Job(glueContext)
 job.init(args['JOB_NAME'], args)
 
@@ -34,10 +36,9 @@ src_prefix = args['SRC_PREFIX']
 dest_bucket = args['DEST_BUCKET']
 dest_prefix = args['DEST_PREFIX']
 
-# Parse and validate the date parameters
+# Date parsing and validation
 try:
-    start_date = datetime.datetime.strptime(
-        args['START_DATE'], '%Y-%m-%d').date()
+    start_date = datetime.datetime.strptime(args['START_DATE'], '%Y-%m-%d').date()
     end_date = datetime.datetime.strptime(args['END_DATE'], '%Y-%m-%d').date()
     if start_date > end_date:
         raise ValueError("START_DATE cannot be after END_DATE.")
@@ -45,129 +46,113 @@ except ValueError as e:
     logger.error(f"Invalid date format or range: {e}. Please use YYYY-MM-DD.")
     sys.exit(1)
 
-# Function to generate S3 paths based on date range
-def generate_date_paths(start_date, end_date, src_bucket, src_prefix):
-    path_list = []
+# Get indicator list from S3 (using Boto3)
+s3 = boto3.client('s3')
+
+# def get_indicator_list_from_s3(bucket, prefix):
+#     indicators = []
+#     s3 = boto3.client('s3')
+#     paginator = s3.get_paginator('list_objects_v2')
+#     logger.info(f"s3.get_paginator('list_objects_v2') - {paginator}")
+#     pages = paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter='/')
+#     logger.info(f"paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter='/') - {pages}")
+#     for page in pages:
+#         if 'CommonPrefixes' in page:
+#             for common_prefix in page['CommonPrefixes']:
+#                 parts = common_prefix['Prefix'].split('/')
+#                 if len(parts) >= 3 and parts[1].startswith("indicator="):
+#                     indicator_folder = parts[1]
+#                     indicator = indicator_folder.split("=")[1]
+#                     indicators.append(indicator)
+#                 else:
+#                     logger.warning(f"Unexpected prefix format: {common_prefix['Prefix']}")
+#     return indicators
+
+def get_indicator_list_from_s3(bucket, prefix):
+    indicators = []
+    s3 = boto3.client('s3')
+    paginator = s3.get_paginator('list_objects_v2')
+    logger.info(f"s3.get_paginator('list_objects_v2') - {paginator}")
+    pages = paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter='/')
+    logger.info(f"paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter='/') - {pages}")
+
+    for page in pages:
+        if 'CommonPrefixes' in page:
+            for common_prefix in page['CommonPrefixes']:
+                parts = common_prefix['Prefix'].split('/')
+                logger.info(f"Processing prefix: {common_prefix['Prefix']} - Parts: {parts}")
+
+                # Check if 'indicator=' is in the path after 'raw_data/'
+                if len(parts) >= 4 and parts[2].startswith("indicator="):
+                    indicator_folder = parts[2]
+                    indicator = indicator_folder.split("=")[1]
+                    indicators.append(indicator)
+                else:
+                    logger.warning(f"Unexpected prefix format: {common_prefix['Prefix']} - Parts: {parts}")
+    return indicators
+
+
+indicator_list = get_indicator_list_from_s3(src_bucket, src_prefix)
+
+if not indicator_list:
+    logger.error("Could not retrieve indicator list from S3. Exiting.")
+    sys.exit(1)
+
+logger.info(f"Indicators found: {indicator_list}")
+
+# Helper functions
+def generate_indicator_month_paths(src_bucket, src_prefix, indicator, year, month):
+    return f"s3://{src_bucket}/{src_prefix}/indicator={indicator}/observation_year={year}/observation_month={month}"
+
+def process_data(df):
+    def process_value(value):
+        try:
+            num = float(value)
+            return int(num) if num.is_integer() else round(num, 2)
+        except (ValueError, TypeError):
+            return None
+
+    process_value_udf = F.udf(process_value, returnType=DoubleType())
+    return (
+        df.filter(F.col("value") != ".")
+        .withColumn("observation_value", process_value_udf(F.col("value")))
+        .drop("value", "realtime_end", "realtime_start", "date")
+    )
+
+def next_month(current_date):
+    if current_date.month == 12:
+        return date(current_date.year + 1, 1, 1)
+    else:
+        return date(current_date.year, current_date.month + 1, 1)
+
+# Main processing loop
+for indicator in indicator_list:
     current_date = date(start_date.year, start_date.month, 1)
-    end_month = date(end_date.year, end_date.month, 1)
-    while current_date <= end_month:
-        year = current_date.year
-        month = current_date.month
-        # Construct the path for this year and month
-        path = f"s3://{src_bucket}/{src_prefix}/indicator=*/observation_year={year}/observation_month={month}"
-        path_list.append(path)
-        # Move to the next month
-        if month == 12:
-            current_date = date(year + 1, 1, 1)
-        else:
-            current_date = date(year, month + 1, 1)
-    return path_list
+    end_loop = date(end_date.year, end_date.month, 1)
+    while current_date <= end_loop:
+        input_path = generate_indicator_month_paths(src_bucket, src_prefix, indicator, current_date.year, current_date.month)
+        try:
+            filtered_df = spark.read.json(input_path)
+            logger.info(f"Read data from: {input_path}")
 
+            filtered_df = filtered_df.withColumn("indicator_path", F.input_file_name())
+            filtered_df = filtered_df.withColumn("series_id", F.regexp_extract(F.col("indicator_path"), r'indicator=([^/]+)', 1))
+            filtered_df = filtered_df.drop('indicator_path')
 
-# Generate the list of paths to read
-paths_to_read = generate_date_paths(
-    start_date, end_date, src_bucket, src_prefix)
+            transformed_df = process_data(filtered_df)
 
-# Read JSON data from the generated paths
-try:
-    df = spark.read \
-        .option("basePath", f"s3://{src_bucket}/{src_prefix}") \
-        .json(paths_to_read)
-    logger.info("Data successfully read into DataFrame.")
-except Exception as e:
-    logger.error(f"An error occurred while reading data: {e}")
-    sys.exit(1)
+            transformed_df = transformed_df.withColumn("observation_year", F.year("observation_date").cast(IntegerType()))
+            transformed_df = transformed_df.withColumn("observation_month", F.month("observation_date").cast(IntegerType()))
 
-# Ensure 'observation_date' is in date format
-df = df.withColumn("observation_date", F.to_date(F.col("date"), "yyyy-MM-dd"))
-df = df.withColumn("observation_date", F.date_format(
-    F.col("observation_date"), "yyyy-MM-dd"))
+            output_path = f"s3://{dest_bucket}/{dest_prefix}"
+            transformed_df.write.mode("overwrite") \
+                .partitionBy("indicator", "observation_year", "observation_month") \
+                .parquet(output_path)
+            logger.info(f"Data for indicator {indicator} - {current_date.strftime('%Y-%m')} transformed and saved.")
 
-# Filter data within the specified date range
-df = df.filter(
-    (F.col("observation_date") >= F.lit(start_date)) &
-    (F.col("observation_date") <= F.lit(end_date))
-)
-logger.info(f"Data filtered between {start_date} and {end_date}.")
+        except Exception as e:
+            logger.warning(f"No data found at {input_path}: {e}")
 
-# Transform the 'value' column to numeric, handling non-numeric values
-def process_value(value):
-    try:
-        num = float(value)
-        if num.is_integer():
-            return int(num)
-        else:
-            return round(num, 2)
-    except (ValueError, TypeError):
-        return None
+        current_date = next_month(current_date)
 
-
-process_value_udf = F.udf(process_value, returnType=DoubleType())
-
-transformed_df = (
-    df.filter(F.col("value") != ".")
-    .withColumn("observation_value", process_value_udf(F.col("value")))
-    .drop("value", "realtime_end", "realtime_start", "date")
-)
-logger.info("Data transformation complete.")
-
-# Extract 'indicator' from file path using temporary column
-transformed_df = transformed_df.withColumn(
-    "indicator_path", F.input_file_name())
-
-# Extract 'indicator' value from 'indicator_path' using regex
-transformed_df = transformed_df.withColumn(
-    "indicator",
-    F.regexp_extract(F.col("indicator_path"), r'indicator=([^/]+)', 1)
-)
-logger.info("Indicator column extracted from file paths.")
-
-# Check for missing 'indicator' values
-missing_indicators = transformed_df.filter(
-    (F.col("indicator").isNull()) | (F.col("indicator") == ""))
-missing_count = missing_indicators.count()
-if missing_count > 0:
-    logger.warning(
-        f"There are {missing_count} records with missing 'indicator' values.")
-else:
-    logger.info("All records have 'indicator' values.")
-
-# Drop the 'indicator_path' column as it's no longer needed
-transformed_df = transformed_df.drop('indicator_path')
-
-transformed_df = transformed_df.withColumn(
-    "observation_year",
-    F.year("observation_date").cast(IntegerType())
-)
-
-transformed_df = transformed_df.withColumn(
-    "observation_month",
-    F.month("observation_date").cast(IntegerType())
-)
-logger.info("Partition columns 'observation_year' and 'observation_month' added.")
-
-# Deduplicate data if necessary
-transformed_df = transformed_df.dropDuplicates(
-    ['indicator', 'observation_date'])
-logger.info(
-    "Duplicate records removed based on 'indicator' and 'observation_date'.")
-
-# Configure Spark for dynamic partition overwrite
-spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
-
-# Write transformed data back to S3, partitioned by indicator/year/month
-output_path = f"s3://{dest_bucket}/{dest_prefix}"
-
-try:
-    transformed_df.write.mode("overwrite") \
-        .partitionBy("indicator", "observation_year", "observation_month") \
-        .parquet(output_path)
-    logger.info(f"Data successfully transformed and saved to {output_path}")
-
-except Exception as e:
-    logger.error(f"An error occurred during data write: {e}")
-    sys.exit(1)
-
-
-# Commit the Glue job
 job.commit()
