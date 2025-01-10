@@ -62,7 +62,7 @@ variable "python_version" {
 variable "timeout" {
   description = "Timeout for glue job"
   type        = number
-  default     = 5
+  default     = 20
 }
 
 variable "fred_api_key" {

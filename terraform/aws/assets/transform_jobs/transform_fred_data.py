@@ -102,7 +102,6 @@ def process_data(df):
         .withColumnRenamed("date", "observation_date")
         .drop("value", "realtime_end", "realtime_start")
         .withColumn("indicator", F.lit(indicator))
-        .withColumn("series_id", F.lit(indicator))
         .withColumn("observation_year", F.year("observation_date").cast(IntegerType()))
         .withColumn("observation_month", F.month("observation_date").cast(IntegerType()))
     )
@@ -117,17 +116,17 @@ for indicator in indicator_list:
     current_date = date(start_date.year, start_date.month, 1)
     end_loop = date(end_date.year, end_date.month, 1)
     while current_date <= end_loop:
-        input_path = f"s3://{src_bucket}/{src_prefix}/indicator={indicator}/observation_year={current_date.year}/observation_month={current_date.month}"
+        input_path = f"s3://{src_bucket}/{src_prefix}/indicator={indicator}"
         try:
             filtered_df = spark.read.json(input_path)
             logger.info(f"Read data from: {input_path}")
 
             transformed_df = process_data(filtered_df)
 
-            output_path = f"s3://{dest_bucket}/{dest_prefix}/indicator={indicator}/observation_year={current_date.year}/observation_month={current_date.month}"
+            output_path = f"s3://{dest_bucket}/{dest_prefix}/indicator={indicator}"
 
             transformed_df.write.mode("overwrite") \
-                .partitionBy("indicator", "observation_year", "observation_month") \
+                .partitionBy("observation_year", "observation_month") \
                 .parquet(output_path)
             logger.info(f"Data for indicator {indicator} - {current_date.strftime('%Y-%m')} transformed and saved.")
 
