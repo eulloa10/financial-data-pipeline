@@ -46,51 +46,45 @@ except ValueError as e:
     logger.error(f"Invalid date format or range: {e}. Please use YYYY-MM-DD.")
     sys.exit(1)
 
-# Get indicator list from S3 (using Boto3)
 s3 = boto3.client('s3')
 
-# def get_indicator_list_from_s3(bucket, prefix):
-#     indicators = []
-#     s3 = boto3.client('s3')
-#     paginator = s3.get_paginator('list_objects_v2')
-#     logger.info(f"s3.get_paginator('list_objects_v2') - {paginator}")
-#     pages = paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter='/')
-#     logger.info(f"paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter='/') - {pages}")
-#     for page in pages:
-#         if 'CommonPrefixes' in page:
-#             for common_prefix in page['CommonPrefixes']:
-#                 parts = common_prefix['Prefix'].split('/')
-#                 if len(parts) >= 3 and parts[1].startswith("indicator="):
-#                     indicator_folder = parts[1]
-#                     indicator = indicator_folder.split("=")[1]
-#                     indicators.append(indicator)
-#                 else:
-#                     logger.warning(f"Unexpected prefix format: {common_prefix['Prefix']}")
-#     return indicators
-
 def get_indicator_list_from_s3(bucket, prefix):
+    """
+    Fetches a list of indicators from the given bucket and prefix in S3.
+
+    Args:
+        bucket (str): The name of the S3 bucket.
+        prefix (str): The prefix of the first-level folder ("raw_data/").
+
+    Returns:
+        list: A list of indicator names.
+    """
     indicators = []
     s3 = boto3.client('s3')
     paginator = s3.get_paginator('list_objects_v2')
-    logger.info(f"s3.get_paginator('list_objects_v2') - {paginator}")
-    pages = paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter='/')
-    logger.info(f"paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter='/') - {pages}")
 
-    for page in pages:
+    first_level_prefix = f"{prefix}/"
+
+    # Paginate over the second-level prefixes under the first-level prefix
+    logger.info(f"Fetching second-level prefixes under {first_level_prefix}")
+    second_level_pages = paginator.paginate(Bucket=bucket, Prefix=first_level_prefix, Delimiter='/')
+
+    for page in second_level_pages:
         if 'CommonPrefixes' in page:
             for common_prefix in page['CommonPrefixes']:
-                parts = common_prefix['Prefix'].split('/')
-                logger.info(f"Processing prefix: {common_prefix['Prefix']} - Parts: {parts}")
+                prefix = common_prefix['Prefix']
+                logger.info(f"Processing prefix: {prefix}")
 
-                # Check if 'indicator=' is in the path after 'raw_data/'
-                if len(parts) >= 4 and parts[2].startswith("indicator="):
-                    indicator_folder = parts[2]
-                    indicator = indicator_folder.split("=")[1]
+                # Extract the indicator name from the prefix
+                if "indicator=" in prefix:
+                    indicator = prefix.split("indicator=")[-1].rstrip('/')
                     indicators.append(indicator)
                 else:
-                    logger.warning(f"Unexpected prefix format: {common_prefix['Prefix']} - Parts: {parts}")
-    return indicators
+                    logger.warning(f"Unexpected prefix format: {prefix}")
+        else:
+            logger.warning(f"No CommonPrefixes found in page: {page}")
 
+    return indicators
 
 indicator_list = get_indicator_list_from_s3(src_bucket, src_prefix)
 
@@ -100,23 +94,17 @@ if not indicator_list:
 
 logger.info(f"Indicators found: {indicator_list}")
 
-# Helper functions
-def generate_indicator_month_paths(src_bucket, src_prefix, indicator, year, month):
-    return f"s3://{src_bucket}/{src_prefix}/indicator={indicator}/observation_year={year}/observation_month={month}"
-
 def process_data(df):
-    def process_value(value):
-        try:
-            num = float(value)
-            return int(num) if num.is_integer() else round(num, 2)
-        except (ValueError, TypeError):
-            return None
-
-    process_value_udf = F.udf(process_value, returnType=DoubleType())
     return (
-        df.filter(F.col("value") != ".")
-        .withColumn("observation_value", process_value_udf(F.col("value")))
-        .drop("value", "realtime_end", "realtime_start", "date")
+        df.filter(F.col("value") != ".")  # Early filtering
+        .withColumn("observation_value", F.col("value").cast(DoubleType()))
+        .withColumn("observation_value", F.round("observation_value", 2))  # Use round
+        .withColumnRenamed("date", "observation_date")
+        .drop("value", "realtime_end", "realtime_start")
+        .withColumn("indicator", F.lit(indicator))
+        .withColumn("series_id", F.lit(indicator))
+        .withColumn("observation_year", F.year("observation_date").cast(IntegerType()))
+        .withColumn("observation_month", F.month("observation_date").cast(IntegerType()))
     )
 
 def next_month(current_date):
@@ -125,33 +113,26 @@ def next_month(current_date):
     else:
         return date(current_date.year, current_date.month + 1, 1)
 
-# Main processing loop
 for indicator in indicator_list:
     current_date = date(start_date.year, start_date.month, 1)
     end_loop = date(end_date.year, end_date.month, 1)
     while current_date <= end_loop:
-        input_path = generate_indicator_month_paths(src_bucket, src_prefix, indicator, current_date.year, current_date.month)
+        input_path = f"s3://{src_bucket}/{src_prefix}/indicator={indicator}/observation_year={current_date.year}/observation_month={current_date.month}"
         try:
             filtered_df = spark.read.json(input_path)
             logger.info(f"Read data from: {input_path}")
 
-            filtered_df = filtered_df.withColumn("indicator_path", F.input_file_name())
-            filtered_df = filtered_df.withColumn("series_id", F.regexp_extract(F.col("indicator_path"), r'indicator=([^/]+)', 1))
-            filtered_df = filtered_df.drop('indicator_path')
-
             transformed_df = process_data(filtered_df)
 
-            transformed_df = transformed_df.withColumn("observation_year", F.year("observation_date").cast(IntegerType()))
-            transformed_df = transformed_df.withColumn("observation_month", F.month("observation_date").cast(IntegerType()))
+            output_path = f"s3://{dest_bucket}/{dest_prefix}/indicator={indicator}/observation_year={current_date.year}/observation_month={current_date.month}"
 
-            output_path = f"s3://{dest_bucket}/{dest_prefix}"
             transformed_df.write.mode("overwrite") \
                 .partitionBy("indicator", "observation_year", "observation_month") \
                 .parquet(output_path)
             logger.info(f"Data for indicator {indicator} - {current_date.strftime('%Y-%m')} transformed and saved.")
 
         except Exception as e:
-            logger.warning(f"No data found at {input_path}: {e}")
+            logger.warning(f"Error processing data: {e}")
 
         current_date = next_month(current_date)
 
