@@ -1,12 +1,3 @@
-# variable "access_key" {
-#   description = "AWS access key"
-#   type = string
-# }
-
-# variable "secret_key" {
-#   description = "AWS secret key"
-#   type = string
-# }
 variable "project" {
   description = "Project name"
   type        = string
@@ -70,28 +61,3 @@ variable "fred_api_key" {
   type        = string
   sensitive   = true
 }
-
-# variable "transform_glue_scripts" {
-#   type = map(object({
-#     type     = string # "extract", "transform", "load"
-#     filename = string
-#   }))
-#   default = {
-#     extract_customer = {
-#       type     = "extract"
-#       filename = "extract_customer_data.py"
-#     }
-#     transform_customer = {
-#       type     = "transform"
-#       filename = "transform_customer_data.py"
-#     }
-#     transform_product = {
-#       type = "transform"
-#       filename = "transform_product_data.py"
-#     }
-#     load_customer = {
-#         type = "load"
-#         filename = "load_customer_data.py"
-#     }
-#   }
-# }

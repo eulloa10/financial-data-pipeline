@@ -59,16 +59,28 @@ variable "fred_api_key" {
   sensitive = true
 }
 
-variable "observation_start_date" {
-  description = "Start date for FRED data extraction"
+variable "observation_start_year" {
+  description = "Start year for FRED data aggregation"
   type = string
-  default = "2024-12-01"
+  default = "2024"
 }
 
-variable "observation_end_date" {
-  description = "End date for FRED data extraction"
+variable "observation_end_year" {
+  description = "End year for FRED data aggregation"
   type = string
-  default = "2024-12-31"
+  default = "2024"
+}
+
+variable "observation_year" {
+  description = "Year for FRED data aggregation"
+  type = string
+  default = "2024"
+}
+
+variable "observation_month" {
+  description = "Month for FRED data aggregation"
+  type = string
+  default = "12"
 }
 
 variable "glue_role_arn" {

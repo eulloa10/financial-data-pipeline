@@ -11,7 +11,7 @@ resource "aws_glue_job" "fred_transform_etl_job" {
 
   default_arguments = {
     "--SRC_BUCKET"   = "${var.project}-${var.data_lake_name}"
-    "--SRC_PREFIX"     = "raw_data/"
+    "--SRC_PREFIX"     = "raw_data"
     "--DEST_BUCKET"     = "${var.project}-${var.data_lake_name}"
     "--DEST_PREFIX"     = "processed_data"
     "--START_DATE"      = var.observation_start_date
