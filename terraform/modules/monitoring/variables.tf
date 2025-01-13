@@ -22,3 +22,8 @@ variable "rds_instance_id" {
   description = "ID of the RDS instance"
   type        = string
 }
+
+variable "alert_email" {
+  description = "Email address for monitoring alerts"
+  type        = string
+}

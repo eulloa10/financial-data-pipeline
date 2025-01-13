@@ -75,3 +75,18 @@ variable "glue_role_arn" {
   description = "IAM role ARN for the Glue job"
   type        = string
 }
+
+variable "glue_assume_role_policy" {
+  description = "IAM assume role policy for Glue"
+  type        = string
+}
+
+variable "glue_access_policy" {
+  description = "IAM access policy for Glue"
+  type        = string
+}
+
+variable "scripts_bucket_id" {
+  description = "ID of the scripts S3 bucket"
+  type        = string
+}

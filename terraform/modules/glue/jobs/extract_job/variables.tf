@@ -70,3 +70,23 @@ variable "observation_end_date" {
   type = string
   default = "2024-12-31"
 }
+
+variable "scripts_bucket_id" {
+  description = "ID of the scripts S3 bucket"
+  type        = string
+}
+
+variable "glue_assume_role_policy" {
+  description = "IAM assume role policy for Glue"
+  type        = string
+}
+
+variable "glue_access_policy" {
+  description = "IAM access policy for Glue"
+  type        = string
+}
+
+variable "glue_role_arn" {
+  description = "ARN of the Glue IAM role"
+  type        = string
+}

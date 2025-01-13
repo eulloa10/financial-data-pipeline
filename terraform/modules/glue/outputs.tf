@@ -14,10 +14,7 @@ output "glue_scripts_bucket" {
   value = var.glue_scripts_bucket
 }
 
-output "aws_user" {
-  value = var.aws_user
+output "security_group_id" {
+  description = "ID of the security group for Glue jobs"
+  value       = var.security_group_id
 }
-
-# output "terraform_bucket" {
-#   value = var.terraform_bucket
-# }

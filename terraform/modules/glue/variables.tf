@@ -8,11 +8,6 @@ variable "region" {
   type        = string
 }
 
-variable "aws_user" {
-  description = "AWS user name"
-  type        = string
-}
-
 variable "data_lake_name" {
   description = "S3 bucket for fred data lake"
   type        = string
@@ -31,11 +26,6 @@ variable "glue_version" {
 variable "number_of_workers" {
   type    = number
   default = 2
-}
-
-variable "terraform_bucket" {
-  description = "Terraform state bucket"
-  type        = string
 }
 
 variable "worker_type" {
@@ -60,4 +50,19 @@ variable "fred_api_key" {
   description = "API key"
   type        = string
   sensitive   = true
+}
+
+variable "vpc_id" {
+  description = "ID of the VPC"
+  type        = string
+}
+
+variable  "environment" {
+  description = "Environment name"
+  type        = string
+}
+
+variable "security_group_id" {
+  description = "ID of the security group for Glue jobs"
+  type        = string
 }

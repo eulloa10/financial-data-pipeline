@@ -1,3 +1,18 @@
+data "aws_ami" "amazon_linux_2" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
 resource "aws_security_group" "airflow" {
   name        = "${var.project}-airflow-sg"
   description = "Security group for Airflow EC2 instance"
@@ -62,15 +77,24 @@ resource "aws_instance" "airflow" {
   iam_instance_profile        = aws_iam_instance_profile.airflow.name
   key_name                    = var.key_name
 
+  credit_specification {
+    cpu_credits = "standard"
+  }
+
   root_block_device {
     volume_size = 30
     volume_type = "gp3"
   }
 
   user_data = templatefile("${path.module}/templates/setup.sh.tpl", {
-    project     = var.project
-    environment = var.environment
-    region      = var.region
+    project                 = var.project
+    environment             = var.environment
+    region                  = var.region
+    docker_compose_content  = templatefile("${path.module}/templates/docker-compose.yml.tpl", {
+    airflow_db_password     = var.airflow_db_password
+    fernet_key              = var.fernet_key
+    webserver_secret_key    = var.webserver_secret_key
+    })
   })
 
   tags = {

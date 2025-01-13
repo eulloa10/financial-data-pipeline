@@ -39,10 +39,10 @@ variable "region" {
   type        = string
 }
 
-variable "backup_bucket" {
-  description = "S3 bucket for Airflow backups"
-  type        = string
-}
+# variable "backup_bucket" {
+#   description = "S3 bucket for Airflow backups"
+#   type        = string
+# }
 
 variable "cloudwatch_config_parameter" {
   description = "SSM parameter name for CloudWatch agent configuration"

@@ -108,12 +108,36 @@ data "aws_iam_policy_document" "glue_access_policy" {
     effect = "Allow"
     actions = [
       "rds-db:connect",
-      "rds:DescribeDBInstances"
+      "rds:DescribeDBInstances",
+      "rds:DescribeDBClusters",
+      "rds:DescribeDBEngineVersions",
+      "rds:ModifyDBInstance",
+      "rds:CreateDBInstance",
+      "rds:DeleteDBInstance",
+      "rds:RebootDBInstance",
+      "rds:StartDBInstance",
+      "rds:StopDBInstance",
+      "rds:ListTagsForResource",
+      "rds:AddTagsToResource"
     ]
     resources = [
       "arn:aws:rds:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:db:${var.project}-*"
     ]
   }
+
+  statement {
+    sid    = "AllowRDSSecretAccess"
+    effect = "Allow"
+    actions = [
+      "secretsmanager:GetSecretValue",
+      "secretsmanager:DescribeSecret"
+    ]
+
+    resources = [
+      "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.project}/rds-*"
+    ]
+  }
+
 
   # CloudTrail Access (limited to describe actions)
   statement {

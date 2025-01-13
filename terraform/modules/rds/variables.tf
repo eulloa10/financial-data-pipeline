@@ -10,6 +10,11 @@ variable "environment" {
   type        = string
 }
 
+variable "region" {
+  description = "AWS region"
+  type        = string
+}
+
 variable "vpc_id" {
   description = "VPC ID where RDS will be deployed"
   type        = string
@@ -18,6 +23,11 @@ variable "vpc_id" {
 variable "private_subnet_ids" {
   description = "List of private subnet IDs for RDS"
   type        = list(string)
+}
+
+variable "glue_security_group_id" {
+  description = "Security group ID of Glue jobs"
+  type        = string
 }
 
 variable "airflow_security_group_id" {
@@ -199,4 +209,9 @@ variable "port" {
   description = "The port on which the DB accepts connections"
   type        = number
   default     = 5432
+}
+
+variable "alert_email" {
+  description = "Email address to receive RDS alerts"
+  type        = string
 }
