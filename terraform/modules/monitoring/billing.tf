@@ -19,8 +19,8 @@ resource "aws_cloudwatch_metric_alarm" "billing_alarm" {
   namespace          = "AWS/Billing"
   period             = "21600"  # 6 hours
   statistic          = "Maximum"
-  threshold          = "1"      # $1 USD
-  alarm_description  = "Billing alarm when charges exceed $1"
+  threshold          = "10"      # $10 USD
+  alarm_description  = "Billing alarm when charges exceed $10"
   alarm_actions      = [aws_sns_topic.billing_alert.arn]
 
   dimensions = {
@@ -32,7 +32,7 @@ resource "aws_cloudwatch_metric_alarm" "billing_alarm" {
 resource "aws_budgets_budget" "cost" {
   name              = "${var.project}-monthly-budget"
   budget_type       = "COST"
-  limit_amount      = "1"
+  limit_amount      = "10"
   limit_unit        = "USD"
   time_unit         = "MONTHLY"
   time_period_start = formatdate("YYYY-MM-01_12:00", timestamp())
