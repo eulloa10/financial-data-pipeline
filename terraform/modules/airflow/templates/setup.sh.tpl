@@ -22,6 +22,10 @@ unzip awscliv2.zip
 mkdir -p /home/ec2-user/airflow/{dags,logs,plugins}
 cd /home/ec2-user/airflow
 
+# Fix permissions for Airflow
+sudo mkdir -p /home/ec2-user/airflow/{dags,logs,plugins}
+sudo chown -R 50000:50000 /home/ec2-user/airflow/
+
 # Create S3 sync script for DAGs
 cat > /home/ec2-user/sync_dags.sh << 'EOF'
 #!/bin/bash
@@ -43,6 +47,23 @@ EOF
 
 # Set correct permissions
 chown -R ec2-user:ec2-user /home/ec2-user/airflow
+
+# Initialize Airflow
+docker-compose up -d postgres redis
+sleep 10
+
+# Initialize the database
+docker-compose run --rm airflow-webserver airflow db init
+docker-compose run --rm airflow-webserver airflow connections create-default-connections
+
+# Create admin user (using variables)
+docker-compose run --rm airflow-webserver airflow users create \
+    --username ${airflow_admin_username} \
+    --firstname ${airflow_admin_firstname} \
+    --lastname ${airflow_admin_lastname} \
+    --role Admin \
+    --email ${airflow_admin_email} \
+    --password ${airflow_admin_password}
 
 # Create a script to start Airflow services
 cat > /home/ec2-user/start-airflow.sh << 'EOF'

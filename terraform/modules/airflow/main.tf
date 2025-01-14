@@ -97,6 +97,11 @@ resource "aws_instance" "airflow" {
       webserver_secret_key  = var.webserver_secret_key
       dags_bucket          = aws_s3_bucket.airflow_dags.id
     })
+    airflow_admin_username   = var.airflow_admin_username
+    airflow_admin_firstname  = var.airflow_admin_firstname
+    airflow_admin_lastname   = var.airflow_admin_lastname
+    airflow_admin_email      = var.airflow_admin_email
+    airflow_admin_password   = var.airflow_admin_password
   })
 
   tags = {

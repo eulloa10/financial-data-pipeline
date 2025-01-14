@@ -130,3 +130,30 @@ variable "alert_email" {
   description = "Email to send alerts to"
   type        = string
 }
+
+variable "airflow_admin_username" {
+  description = "Airflow admin username"
+  type        = string
+  sensitive   = true
+}
+
+variable "airflow_admin_firstname" {
+  description = "Airflow admin first name"
+  type        = string
+}
+
+variable "airflow_admin_lastname" {
+  description = "Airflow admin last name"
+  type        = string
+}
+
+variable "airflow_admin_email" {
+  description = "Airflow admin email"
+  type        = string
+}
+
+variable "airflow_admin_password" {
+  description = "Airflow admin password"
+  type        = string
+  sensitive   = true
+}

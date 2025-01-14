@@ -40,6 +40,12 @@ module "airflow" {
   webserver_secret_key   = var.airflow_webserver_secret_key
   fernet_key             = var.airflow_fernet_key
 
+  airflow_admin_username   = var.airflow_admin_username
+  airflow_admin_firstname  = var.airflow_admin_firstname
+  airflow_admin_lastname   = var.airflow_admin_lastname
+  airflow_admin_email      = var.airflow_admin_email
+  airflow_admin_password   = var.airflow_admin_password
+
   depends_on = [module.networking]
 }
 
