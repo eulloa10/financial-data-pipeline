@@ -22,6 +22,7 @@ module "networking" {
   project     = var.project
   environment = var.environment
   vpc_cidr    = var.vpc_cidr
+  region      = var.region
 }
 
 module "airflow" {
@@ -74,8 +75,6 @@ module "glue" {
   timeout             = var.timeout
   fred_api_key        = var.fred_api_key
   security_group_id   = aws_security_group.glue.id
-
-  depends_on = [module.rds]
 }
 
 module "monitoring" {

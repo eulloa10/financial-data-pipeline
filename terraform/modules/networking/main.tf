@@ -13,7 +13,7 @@ resource "aws_vpc" "main" {
   }
 }
 
-# Single public subnet
+# Public subnet for Airflow
 resource "aws_subnet" "public" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = cidrsubnet(var.vpc_cidr, 8, 0)
@@ -25,14 +25,15 @@ resource "aws_subnet" "public" {
   }
 }
 
-# Single private subnet
+# Two private subnets (RDS requirement) but both in same region
 resource "aws_subnet" "private" {
+  count             = 2
   vpc_id            = aws_vpc.main.id
-  cidr_block        = cidrsubnet(var.vpc_cidr, 8, 1)
-  availability_zone = data.aws_availability_zones.available.names[0]
+  cidr_block        = cidrsubnet(var.vpc_cidr, 8, count.index + 1)
+  availability_zone = data.aws_availability_zones.available.names[count.index]
 
   tags = {
-    Name        = "${var.project}-private-subnet"
+    Name        = "${var.project}-private-subnet-${count.index + 1}"
     Environment = var.environment
   }
 }
@@ -60,8 +61,51 @@ resource "aws_route_table" "public" {
   }
 }
 
-# Single route table association
+# Route table for private subnets
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name        = "${var.project}-private-rt"
+    Environment = var.environment
+  }
+}
+
+# Public subnet route table association
 resource "aws_route_table_association" "public" {
   subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.public.id
+}
+
+# Private subnet route table associations
+resource "aws_route_table_association" "private" {
+  count          = 2
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private.id
+}
+
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.region}.s3"
+  vpc_endpoint_type = "Gateway"
+
+  route_table_ids = [
+    aws_route_table.private.id,
+    aws_route_table.public.id
+  ]
+
+  tags = {
+    Name        = "${var.project}-s3-endpoint"
+    Environment = var.environment
+  }
+}
+
+resource "aws_vpc_endpoint_route_table_association" "private_s3" {
+  route_table_id  = aws_route_table.private.id
+  vpc_endpoint_id = aws_vpc_endpoint.s3.id
+}
+
+resource "aws_vpc_endpoint_route_table_association" "public_s3" {
+  route_table_id  = aws_route_table.public.id
+  vpc_endpoint_id = aws_vpc_endpoint.s3.id
 }

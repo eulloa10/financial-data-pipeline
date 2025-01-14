@@ -9,4 +9,8 @@
 
 # provider "aws" {
 #   region = var.region
+
+#   endpoints {
+#     s3 = "s3.${var.region}.amazonaws.com"
+#   }
 # }

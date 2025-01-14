@@ -109,7 +109,7 @@ variable "skip_final_snapshot" {
 variable "engine_version" {
   description = "PostgreSQL engine version"
   type        = string
-  default     = "14.7"
+  default     = "14.15"
 }
 
 variable "parameter_group_family" {

@@ -1,3 +1,7 @@
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
 resource "aws_db_subnet_group" "main" {
   name       = "${var.project}-db-subnet-group"
   subnet_ids = var.private_subnet_ids
@@ -61,9 +65,11 @@ resource "aws_security_group" "rds" {
 resource "aws_db_instance" "fred" {
   identifier        = "${var.project}-${var.environment}-db"
   engine            = "postgres"
-  engine_version    = "14.7"
+  engine_version    = var.engine_version
   instance_class    = var.instance_class
   allocated_storage = 20
+  availability_zone = data.aws_availability_zones.available.names[0]
+  multi_az          = false
 
   db_name  = var.db_name
   username = var.db_username

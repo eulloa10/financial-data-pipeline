@@ -1,9 +1,16 @@
 resource "aws_s3_bucket" "data_lake" {
   bucket = "${var.project}-${var.data_lake_name}"
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_s3_bucket" "scripts" {
   bucket = "${var.project}-${var.glue_scripts_bucket}"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "data_lake" {
@@ -28,6 +35,10 @@ resource "aws_s3_bucket_public_access_block" "scripts" {
 resource "aws_iam_role" "glue_role" {
   name               = "${var.project}-glue-role"
   assume_role_policy = data.aws_iam_policy_document.glue_base_policy.json
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_iam_role_policy" "glue_access" {

@@ -33,6 +33,10 @@ services:
       - AIRFLOW__CORE__FERNET_KEY=${fernet_key}
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
       - AIRFLOW__WEBSERVER__SECRET_KEY=${webserver_secret_key}
+      - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
+      - AIRFLOW__CORE__REMOTE_LOGGING=True
+      - AIRFLOW__CORE__REMOTE_BASE_LOG_FOLDER=s3://${dags_bucket}/logs
+      - AIRFLOW__CORE__REMOTE_LOG_CONN_ID=aws_default
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
@@ -51,6 +55,10 @@ services:
       - AIRFLOW__CELERY__BROKER_URL=redis://:@redis:6379/0
       - AIRFLOW__CORE__FERNET_KEY=${fernet_key}
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
+      - AIRFLOW__CORE__REMOTE_LOGGING=True
+      - AIRFLOW__CORE__REMOTE_BASE_LOG_FOLDER=s3://${dags_bucket}/logs
+      - AIRFLOW__CORE__REMOTE_LOG_CONN_ID=aws_default
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs

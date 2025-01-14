@@ -87,13 +87,15 @@ resource "aws_instance" "airflow" {
   }
 
   user_data = templatefile("${path.module}/templates/setup.sh.tpl", {
-    project                 = var.project
-    environment             = var.environment
-    region                  = var.region
-    docker_compose_content  = templatefile("${path.module}/templates/docker-compose.yml.tpl", {
-    airflow_db_password     = var.airflow_db_password
-    fernet_key              = var.fernet_key
-    webserver_secret_key    = var.webserver_secret_key
+    project     = var.project
+    environment = var.environment
+    region      = var.region
+    dags_bucket = aws_s3_bucket.airflow_dags.id
+    docker_compose_content = templatefile("${path.module}/templates/docker-compose.yml.tpl", {
+      airflow_db_password    = var.airflow_db_password
+      fernet_key            = var.fernet_key
+      webserver_secret_key  = var.webserver_secret_key
+      dags_bucket          = aws_s3_bucket.airflow_dags.id
     })
   })
 
@@ -101,4 +103,17 @@ resource "aws_instance" "airflow" {
     Name        = "${var.project}-airflow"
     Environment = var.environment
   }
+}
+
+resource "aws_s3_bucket" "airflow_dags" {
+  bucket = "${var.project}-airflow-dags"
+}
+
+resource "aws_s3_bucket_public_access_block" "airflow_dags" {
+  bucket = aws_s3_bucket.airflow_dags.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
