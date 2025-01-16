@@ -1,14 +1,24 @@
-output "security_group_id" {
-  description = "ID of the Airflow security group"
-  value       = aws_security_group.airflow.id
+output "airflow_public_ip" {
+  description = "Public IP address of the Airflow EC2 instance"
+  value       = aws_instance.airflow_ec2.public_ip
+}
+
+output "airflow_security_group_id" {
+  description = "Security Group ID for Airflow EC2 instance"
+  value       = aws_security_group.airflow_sg.id
+}
+
+output "airflow_instance_id" {
+  description = "EC2 Instance ID for Airflow"
+  value       = aws_instance.airflow_ec2.id
 }
 
 output "instance_id" {
-  description = "ID of the Airflow EC2 instance"
-  value       = aws_instance.airflow.id
+  description = "EC2 Instance ID for Airflow"
+  value       = aws_instance.airflow_ec2.id
 }
 
-output "public_ip" {
-  description = "Public IP of the Airflow EC2 instance"
-  value       = aws_instance.airflow.public_ip
+output "airflow_url" {
+  description = "URL to access the Airflow web UI"
+  value       = "http://${aws_instance.airflow_ec2.public_ip}:8080"
 }

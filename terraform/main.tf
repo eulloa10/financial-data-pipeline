@@ -16,6 +16,22 @@ resource "aws_security_group" "glue" {
   }
 }
 
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  owners = ["amazon"]
+}
+
 module "networking" {
   source = "./modules/networking"
 
@@ -30,23 +46,26 @@ module "airflow" {
 
   project                = var.project
   environment            = var.environment
+  name_prefix            = "dev"
   vpc_id                 = module.networking.vpc_id
   subnet_id              = module.networking.public_subnet_ids[0]
-  allowed_ips            = var.allowed_ips
-  key_name               = var.key_name
+  ami                    = data.aws_ami.amazon_linux.id
   instance_type          = var.airflow_instance_type
-  region                 = var.region
-  airflow_db_password    = var.airflow_db_password
-  webserver_secret_key   = var.airflow_webserver_secret_key
-  fernet_key             = var.airflow_fernet_key
+  key_name               = var.key_name
+  airflow_admin_username = var.airflow_admin_username
+  airflow_admin_password = var.airflow_admin_password
+  ssh_ingress_cidr_blocks = var.allowed_ips
+  airflow_ingress_cidr_blocks = var.allowed_ips
+  tags                   = {
+    Project = "Airflow DE"
+    Environment = "Development"
+  }
+}
 
-  airflow_admin_username   = var.airflow_admin_username
-  airflow_admin_firstname  = var.airflow_admin_firstname
-  airflow_admin_lastname   = var.airflow_admin_lastname
-  airflow_admin_email      = var.airflow_admin_email
-  airflow_admin_password   = var.airflow_admin_password
-
-  depends_on = [module.networking]
+# Optionally, Output the Airflow endpoint
+output "airflow_url" {
+  description = "URL to access the Airflow web UI"
+  value       = "http://${module.airflow.airflow_public_ip}:8080"
 }
 
 module "rds" {
@@ -61,7 +80,7 @@ module "rds" {
   db_username               = var.db_username
   db_password               = var.db_password
   instance_class            = var.db_instance_class
-  airflow_security_group_id = module.airflow.security_group_id
+  # airflow_security_group_id = module.airflow.security_group_id
   glue_security_group_id    = aws_security_group.glue.id
   alert_email               = var.alert_email
 

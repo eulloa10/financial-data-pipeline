@@ -1,102 +1,74 @@
-variable "project" {
-  description = "Project name"
+variable "name_prefix" {
+  description = "Prefix for naming resources"
   type        = string
-}
-
-variable "environment" {
-  description = "Environment name"
-  type        = string
+  default     = "prod" # Change as needed
 }
 
 variable "vpc_id" {
-  description = "VPC ID where Airflow will be deployed"
+  description = "VPC ID where Airflow EC2 instance will be deployed"
   type        = string
 }
 
 variable "subnet_id" {
-  description = "Subnet ID where Airflow EC2 will be deployed"
+  description = "Subnet ID within the VPC for the EC2 instance"
   type        = string
 }
 
-variable "allowed_ips" {
-  description = "List of IP addresses allowed to access Airflow UI"
-  type        = list(string)
+variable "ami" {
+  description = "AMI ID for the EC2 instance"
+  type        = string
 }
 
 variable "instance_type" {
-  description = "EC2 instance type for Airflow"
+  description = "EC2 instance type"
   type        = string
-  default     = "t3.small"
 }
 
 variable "key_name" {
-  description = "Name of the SSH key pair to use for EC2 instance"
+  description = "Name of the SSH key pair for EC2 access"
   type        = string
-}
-
-variable "region" {
-  description = "AWS region"
-  type        = string
-}
-
-# variable "backup_bucket" {
-#   description = "S3 bucket for Airflow backups"
-#   type        = string
-# }
-
-variable "cloudwatch_config_parameter" {
-  description = "SSM parameter name for CloudWatch agent configuration"
-  type        = string
-  default     = "/airflow/cloudwatch-config"
-}
-
-variable "airflow_db_password" {
-  description = "Password for Airflow's internal PostgreSQL database"
-  type        = string
-  sensitive   = true
-}
-
-variable "webserver_secret_key" {
-  description = "Secret key for Airflow webserver"
-  type        = string
-  sensitive   = true
-}
-
-variable "fernet_key" {
-  description = "Fernet key for Airflow"
-  type        = string
-  sensitive   = true
-}
-
-variable "tags" {
-  description = "Additional tags for resources"
-  type        = map(string)
-  default     = {}
 }
 
 variable "airflow_admin_username" {
   description = "Airflow admin username"
   type        = string
-  sensitive   = true
-}
-
-variable "airflow_admin_firstname" {
-  description = "Airflow admin first name"
-  type        = string
-}
-
-variable "airflow_admin_lastname" {
-  description = "Airflow admin last name"
-  type        = string
-}
-
-variable "airflow_admin_email" {
-  description = "Airflow admin email"
-  type        = string
+  default     = "admin"
 }
 
 variable "airflow_admin_password" {
   description = "Airflow admin password"
   type        = string
   sensitive   = true
+}
+
+variable "region" {
+  description = "AWS region for Airflow configuration"
+  type        = string
+  default     = "us-west-1"
+}
+
+variable "ssh_ingress_cidr_blocks" {
+  description = "CIDR blocks allowed to access SSH (port 22)"
+  type        = list(string)
+}
+
+variable "airflow_ingress_cidr_blocks" {
+  description = "CIDR blocks allowed to access Airflow web UI (port 8080)"
+  type        = list(string)
+}
+
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default     = {}
+}
+
+variable "project" {
+  description = "The name of the project"
+  type        = string
+}
+
+variable "environment" {
+  description = "The deployment environment (e.g., dev, staging, prod)"
+  type        = string
 }

@@ -1,124 +1,160 @@
-data "aws_ami" "amazon_linux_2" {
-  most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-}
-
-resource "aws_security_group" "airflow" {
-  name        = "${var.project}-airflow-sg"
+# modules/airflow/main.tf
+resource "aws_security_group" "airflow_sg" {
+  name        = "${var.name_prefix}-airflow-sg"
   description = "Security group for Airflow EC2 instance"
   vpc_id      = var.vpc_id
 
   ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = var.allowed_ips
+    description      = "Allow HTTP traffic to Airflow web UI"
+    from_port        = 8080
+    to_port          = 8080
+    protocol         = "tcp"
+    cidr_blocks      = var.airflow_ingress_cidr_blocks
+    ipv6_cidr_blocks = []
   }
 
   ingress {
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = var.allowed_ips
+    description      = "Allow SSH access"
+    from_port        = 22
+    to_port          = 22
+    protocol         = "tcp"
+    cidr_blocks      = var.ssh_ingress_cidr_blocks
+    ipv6_cidr_blocks = []
   }
 
   egress {
+    description = "Allow all outbound traffic"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name        = "${var.project}-airflow-sg"
-    Environment = var.environment
-  }
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.name_prefix}-airflow-sg"
+    }
+  )
 }
 
-resource "aws_iam_role" "airflow" {
-  name = "${var.project}-airflow-role"
+resource "aws_iam_role" "airflow_ec2_role" {
+  name = "${var.name_prefix}-airflow-ec2-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+  })
+
+  tags = var.tags
+}
+
+resource "aws_iam_policy" "airflow_policy" {
+  name        = "${var.name_prefix}-airflow-policy"
+  description = "IAM policy for Airflow to access S3 and Glue"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
     Statement = [
       {
-        Action = "sts:AssumeRole"
+        Effect   = "Allow"
+        Action   = [
+          "s3:GetObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          aws_s3_bucket.airflow_dags.arn,
+          "${aws_s3_bucket.airflow_dags.arn}/*"
+        ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = [
+          "glue:StartJobRun",
+          "glue:GetJobRun",
+          "glue:GetJob"
+        ]
+        Resource = "*"
+      },
+      {
         Effect = "Allow"
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        }
+        Action = [
+          "ssm:SendCommand",
+          "ssm:StartSession",
+          "ssm:GetCommandInvocation"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:StartInstances",
+          "ec2:StopInstances"
+        ]
+        Resource = aws_instance.airflow_ec2.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:DescribeAutomationExecutions",
+          "ssm:GetAutomationExecution"
+        ]
+        Resource = "*"
       }
     ]
   })
+
+  tags = var.tags
 }
 
-resource "aws_iam_instance_profile" "airflow" {
-  name = "${var.project}-airflow-profile"
-  role = aws_iam_role.airflow.name
+resource "aws_iam_role_policy_attachment" "attach_airflow_policy" {
+  role       = aws_iam_role.airflow_ec2_role.name
+  policy_arn = aws_iam_policy.airflow_policy.arn
 }
 
-resource "aws_instance" "airflow" {
-  ami           = data.aws_ami.amazon_linux_2.id
-  instance_type = var.instance_type
+resource "aws_iam_instance_profile" "airflow_instance_profile" {
+  name = "${var.name_prefix}-airflow-ec2-profile"
+  role = aws_iam_role.airflow_ec2_role.name
+}
 
+resource "aws_instance" "airflow_ec2" {
+  ami                         = var.ami
+  instance_type               = var.instance_type
   subnet_id                   = var.subnet_id
-  vpc_security_group_ids      = [aws_security_group.airflow.id]
+  vpc_security_group_ids      = [aws_security_group.airflow_sg.id]
   associate_public_ip_address = true
-  iam_instance_profile        = aws_iam_instance_profile.airflow.name
   key_name                    = var.key_name
+  iam_instance_profile        = aws_iam_instance_profile.airflow_instance_profile.name
 
+  root_block_device {
+    volume_size = 16
+    volume_type = "gp3"
+    encrypted   = true
+  }
   credit_specification {
     cpu_credits = "standard"
   }
 
-  root_block_device {
-    volume_size = 30
-    volume_type = "gp3"
-  }
-
   user_data = templatefile("${path.module}/templates/setup.sh.tpl", {
-    project     = var.project
-    environment = var.environment
-    region      = var.region
-    dags_bucket = aws_s3_bucket.airflow_dags.id
+    dag_s3_bucket          = aws_s3_bucket.airflow_dags.bucket
+    airflow_admin_username = var.airflow_admin_username
+    airflow_admin_password = var.airflow_admin_password
+    aws_region             = var.region
     docker_compose_content = templatefile("${path.module}/templates/docker-compose.yml.tpl", {
-      airflow_db_password    = var.airflow_db_password
-      fernet_key            = var.fernet_key
-      webserver_secret_key  = var.webserver_secret_key
-      dags_bucket          = aws_s3_bucket.airflow_dags.id
+      aws_region             = var.region
     })
-    airflow_admin_username   = var.airflow_admin_username
-    airflow_admin_firstname  = var.airflow_admin_firstname
-    airflow_admin_lastname   = var.airflow_admin_lastname
-    airflow_admin_email      = var.airflow_admin_email
-    airflow_admin_password   = var.airflow_admin_password
   })
 
-  tags = {
-    Name        = "${var.project}-airflow"
-    Environment = var.environment
-  }
-}
-
-resource "aws_s3_bucket" "airflow_dags" {
-  bucket = "${var.project}-airflow-dags"
-}
-
-resource "aws_s3_bucket_public_access_block" "airflow_dags" {
-  bucket = aws_s3_bucket.airflow_dags.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.name_prefix}-airflow-ec2"
+    }
+  )
 }

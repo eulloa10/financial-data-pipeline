@@ -30,10 +30,10 @@ variable "glue_security_group_id" {
   type        = string
 }
 
-variable "airflow_security_group_id" {
-  description = "Security group ID of Airflow EC2 instance"
-  type        = string
-}
+# variable "airflow_security_group_id" {
+#   description = "Security group ID of Airflow EC2 instance"
+#   type        = string
+# }
 
 variable "instance_class" {
   description = "RDS instance class"

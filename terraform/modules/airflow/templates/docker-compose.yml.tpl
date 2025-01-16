@@ -7,52 +7,52 @@ services:
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
     volumes:
-      - postgres-db-volume:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
 
-  redis:
-    image: redis:latest
-
-  airflow-webserver:
-    image: apache/airflow:2.7.1
+  webserver:
+    image: apache/airflow:2.6.3
     restart: always
+    user: "$${AIRFLOW_UID:-50000}:0"
     depends_on:
       - postgres
-      - redis
     environment:
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
-      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://airflow:airflow@postgres/airflow
-      - AIRFLOW__CELERY__BROKER_URL=redis://:@redis:6379/0
-      - AIRFLOW__CORE__LOAD_EXAMPLES=False
-      - AIRFLOW__WEBSERVER__SECRET_KEY=your-secret-key
-    volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
-      - ./plugins:/opt/airflow/plugins
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__WEBSERVER__WORKERS: 4
+      AIRFLOW__CORE__REMOTE_LOGGING: 'false'
+      AIRFLOW__CORE__DAG_DISCOVERY_SAFE_MODE: 'False'
+      AIRFLOW_CONN_AWS_DEFAULT: "aws://?region_name=$${aws_region}"
     ports:
       - "8080:8080"
-    command: webserver
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  airflow-scheduler:
-    image: apache/airflow:2.7.1
-    restart: always
-    depends_on:
-      - postgres
-      - redis
-    environment:
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
-      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://airflow:airflow@postgres/airflow
-      - AIRFLOW__CELERY__BROKER_URL=redis://:@redis:6379/0
-      - AIRFLOW__CORE__LOAD_EXAMPLES=False
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
+      - ./config:/opt/airflow/config
+    command: webserver
+
+  scheduler:
+    image: apache/airflow:2.6.3
+    restart: always
+    user: "$${AIRFLOW_UID:-50000}:0"
+    depends_on:
+      - webserver
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__CORE__REMOTE_LOGGING: 'false'
+      AIRFLOW_CONN_AWS_DEFAULT: "aws://?region_name=$${aws_region}"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./config:/opt/airflow/config
     command: scheduler
 
 volumes:
-  postgres-db-volume:
+  postgres_data:
