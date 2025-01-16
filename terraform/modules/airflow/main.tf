@@ -1,4 +1,3 @@
-# modules/airflow/main.tf
 resource "aws_security_group" "airflow_sg" {
   name        = "${var.name_prefix}-airflow-sg"
   description = "Security group for Airflow EC2 instance"
@@ -142,9 +141,12 @@ resource "aws_instance" "airflow_ec2" {
   }
 
   user_data = templatefile("${path.module}/templates/setup.sh.tpl", {
-    dag_s3_bucket          = aws_s3_bucket.airflow_dags.bucket
-    airflow_admin_username = var.airflow_admin_username
-    airflow_admin_password = var.airflow_admin_password
+    dag_s3_bucket           = aws_s3_bucket.airflow_dags.bucket
+    airflow_admin_username  = var.airflow_admin_username
+    airflow_admin_password  = var.airflow_admin_password
+    airflow_admin_firstname = var.airflow_admin_firstname
+    airflow_admin_lastname  = var.airflow_admin_lastname
+    airflow_admin_email     = var.airflow_admin_email
     aws_region             = var.region
     docker_compose_content = templatefile("${path.module}/templates/docker-compose.yml.tpl", {
       aws_region             = var.region

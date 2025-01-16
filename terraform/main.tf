@@ -44,16 +44,19 @@ module "networking" {
 module "airflow" {
   source = "./modules/airflow"
 
-  project                = var.project
-  environment            = var.environment
-  name_prefix            = "dev"
-  vpc_id                 = module.networking.vpc_id
-  subnet_id              = module.networking.public_subnet_ids[0]
-  ami                    = data.aws_ami.amazon_linux.id
-  instance_type          = var.airflow_instance_type
-  key_name               = var.key_name
-  airflow_admin_username = var.airflow_admin_username
-  airflow_admin_password = var.airflow_admin_password
+  project                 = var.project
+  environment             = var.environment
+  name_prefix             = "dev"
+  vpc_id                  = module.networking.vpc_id
+  subnet_id               = module.networking.public_subnet_ids[0]
+  ami                     = data.aws_ami.amazon_linux.id
+  instance_type           = var.airflow_instance_type
+  key_name                = var.key_name
+  airflow_admin_username  = var.airflow_admin_username
+  airflow_admin_password  = var.airflow_admin_password
+  airflow_admin_firstname = var.airflow_admin_firstname
+  airflow_admin_lastname  = var.airflow_admin_lastname
+  airflow_admin_email     = var.airflow_admin_email
   ssh_ingress_cidr_blocks = var.allowed_ips
   airflow_ingress_cidr_blocks = var.allowed_ips
   tags                   = {
@@ -62,7 +65,6 @@ module "airflow" {
   }
 }
 
-# Optionally, Output the Airflow endpoint
 output "airflow_url" {
   description = "URL to access the Airflow web UI"
   value       = "http://${module.airflow.airflow_public_ip}:8080"
@@ -80,7 +82,6 @@ module "rds" {
   db_username               = var.db_username
   db_password               = var.db_password
   instance_class            = var.db_instance_class
-  # airflow_security_group_id = module.airflow.security_group_id
   glue_security_group_id    = aws_security_group.glue.id
   alert_email               = var.alert_email
 

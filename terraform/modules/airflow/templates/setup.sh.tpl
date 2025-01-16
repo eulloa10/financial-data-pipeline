@@ -52,10 +52,10 @@ sudo docker-compose run --rm webserver airflow db upgrade
 sudo docker-compose run --rm webserver airflow users create \
     --username ${airflow_admin_username} \
     --password ${airflow_admin_password} \
-    --firstname Admin \
-    --lastname User \
+    --firstname ${airflow_admin_firstname} \
+    --lastname ${airflow_admin_lastname} \
     --role Admin \
-    --email admin@example.com
+    --email ${airflow_admin_email}
 
 # Start Airflow services
 sudo docker-compose up -d

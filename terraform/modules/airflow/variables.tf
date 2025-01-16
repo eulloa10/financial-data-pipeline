@@ -1,7 +1,7 @@
 variable "name_prefix" {
   description = "Prefix for naming resources"
   type        = string
-  default     = "prod" # Change as needed
+  default     = "dev"
 }
 
 variable "vpc_id" {
@@ -39,6 +39,23 @@ variable "airflow_admin_password" {
   description = "Airflow admin password"
   type        = string
   sensitive   = true
+}
+
+variable "airflow_admin_firstname" {
+  description = "Airflow admin first name"
+  type        = string
+  default     = "Admin"
+}
+
+variable "airflow_admin_lastname" {
+  description = "Airflow admin last name"
+  type        = string
+  default     = "User"
+}
+
+variable "airflow_admin_email" {
+  description = "Airflow admin email"
+  type        = string
 }
 
 variable "region" {

@@ -1,5 +1,3 @@
-# modules/rds/variables.tf
-
 variable "project" {
   description = "Project name"
   type        = string
@@ -29,11 +27,6 @@ variable "glue_security_group_id" {
   description = "Security group ID of Glue jobs"
   type        = string
 }
-
-# variable "airflow_security_group_id" {
-#   description = "Security group ID of Airflow EC2 instance"
-#   type        = string
-# }
 
 variable "instance_class" {
   description = "RDS instance class"
@@ -176,13 +169,11 @@ variable "copy_tags_to_snapshot" {
   default     = true
 }
 
-
 variable "tags" {
   description = "Additional tags for RDS resources"
   type        = map(string)
   default     = {}
 }
-
 
 variable "additional_security_group_ids" {
   description = "List of additional security group IDs to attach to RDS"

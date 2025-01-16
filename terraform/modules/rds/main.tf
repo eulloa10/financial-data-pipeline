@@ -17,15 +17,6 @@ resource "aws_security_group" "rds" {
   description = "Security group for RDS PostgreSQL"
   vpc_id      = var.vpc_id
 
-  # Allow access from Airflow
-  # ingress {
-  #   from_port       = 5432
-  #   to_port         = 5432
-  #   protocol        = "tcp"
-  #   security_groups = [var.airflow_security_group_id]
-  #   description     = "Allow access from Airflow"
-  # }
-
   # Allow access from Glue
   ingress {
     from_port       = 5432
