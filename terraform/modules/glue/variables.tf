@@ -62,7 +62,51 @@ variable  "environment" {
   type        = string
 }
 
-variable "security_group_id" {
+variable "glue_security_group_id" {
   description = "ID of the security group for Glue jobs"
+  type        = string
+}
+
+variable "db_host" {
+  description = "Host of the RDS database"
+  type        = string
+}
+
+variable "db_name" {
+  description = "Name of the RDS database"
+  type        = string
+}
+
+variable "db_username" {
+  description = "Username for the RDS database"
+  type        = string
+  sensitive   = true
+}
+
+variable "db_password" {
+  description = "Password for the RDS database"
+  type        = string
+  sensitive   = true
+}
+
+variable "start_month" {
+  description = "Start month"
+  type        = number
+  default = null
+}
+
+variable "start_year" {
+  description = "Start year"
+  type        = number
+  default = null
+}
+
+variable "private_subnet_id" {
+  description = "Private subnet ID for Glue connection"
+  type        = string
+}
+
+variable "private_subnet_az" {
+  description = "Private subnet availability zone for Glue connection"
   type        = string
 }

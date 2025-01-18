@@ -59,6 +59,7 @@ resource "aws_db_instance" "fred" {
   engine_version    = var.engine_version
   instance_class    = var.instance_class
   allocated_storage = 20
+  storage_type      = "gp2"
   availability_zone = data.aws_availability_zones.available.names[0]
   multi_az          = false
 

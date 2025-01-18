@@ -1,29 +1,56 @@
-resource "aws_glue_job" "fred_load_to_rds_job" {
-  name         = "${var.project}-fred-load-to-rds-job"
-  role_arn     = var.glue_role_arn
+resource "aws_glue_connection" "rds_connection" {
+  name = "${var.project}-rds-connection"
+
+  connection_type = "JDBC"
+
+  connection_properties = {
+    JDBC_CONNECTION_URL = "jdbc:postgresql://${var.db_host}:5432/${var.db_name}"
+    USERNAME           = var.db_username
+    PASSWORD           = var.db_password
+  }
+
+  physical_connection_requirements {
+    availability_zone = var.private_subnet_az
+    subnet_id        = var.private_subnet_id
+    security_group_id_list = [var.glue_security_group_id]
+  }
+}
+
+resource "aws_glue_job" "load_indicators_to_rds" {
+  name     = "${var.project}-load-indicators-to-rds"
+  role_arn = var.glue_role_arn
   glue_version = var.glue_version
 
   command {
-    name            = "glueetl"
-    script_location = "s3://${var.glue_scripts_bucket}/${aws_s3_object.glue_job_load_fred_to_rds.id}"
-    python_version  = var.python_version
+    name="glueetl"
+    script_location = "s3://${var.project}-${var.glue_scripts_bucket}/${aws_s3_object.glue_job_load_fred_data.id}"
+    python_version = var.python_version
   }
 
   default_arguments = {
-    "--SRC_BUCKET"      = "${var.project}-${var.data_lake_name}"
-    "--SRC_PREFIX"      = "aggregated_data"
-    "--YEAR"           = var.year
-    "--DB_SECRET_NAME" = var.db_secret_name
-    "--DB_NAME"        = var.db_name
-    "--TABLE_NAME"     = var.table_name
-    "--additional-python-modules" = "psycopg2-binary"
+      "--SRC_BUCKET"      = "${var.project}-${var.data_lake_name}"
+      "--SRC_PREFIX"      = "aggregated_data"
+      "--START_YEAR"      = var.start_year
+      "--START_MONTH"     = var.start_month
+      "--END_YEAR"        = var.end_year    # Optional
+      "--END_MONTH"       = var.end_month   # Optional
+      "--INDICATOR"       = var.indicator   # Optional
+      "--DB_HOST"         = var.db_host
+      "--DB_NAME"         = var.db_name
+      "--DB_USER"         = var.db_username
+      "--DB_PASSWORD"     = var.db_password
+      "--DB_PORT"         = "5432"
+      "--TABLE_NAME"      = "economic_indicators"
+      "--additional-python-modules" = "psycopg2-binary"
   }
 
-  connections = [var.glue_connection_name]  # Connection to access RDS
-  timeout     = var.timeout
-  max_retries = 0
-
-  execution_property {
+    execution_property {
     max_concurrent_runs = 1
   }
+
+  worker_type  = var.worker_type
+  number_of_workers = var.number_of_workers
+  timeout      = var.timeout
+
+  connections = [aws_glue_connection.rds_connection.name]
 }

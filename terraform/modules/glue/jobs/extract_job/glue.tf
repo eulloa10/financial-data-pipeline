@@ -5,7 +5,7 @@ resource "aws_glue_job" "fred_ingestion_monthly_etl_job" {
 
   command {
     name="glueetl"
-    script_location = "s3://${var.scripts_bucket_id}/${aws_s3_object.glue_job_extract_fred_api.id}"
+    script_location = "s3://${var.project}-${var.scripts_bucket_id}/${aws_s3_object.glue_job_extract_fred_api.id}"
     python_version = var.python_version
   }
 

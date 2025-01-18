@@ -38,7 +38,7 @@ resource "aws_cloudwatch_event_rule" "stop_rds" {
 resource "aws_cloudwatch_event_target" "stop_rds" {
   rule      = aws_cloudwatch_event_rule.stop_rds.name
   target_id = "StopRDSInstance"
-  arn       = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:automation-definition/AWS-StopRDSInstance"
+  arn       = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:automation-definition/AWS-StopRDSInstance:$LATEST"
   role_arn  = aws_iam_role.eventbridge_role.arn
 
   input = jsonencode({
@@ -76,7 +76,8 @@ resource "aws_iam_role_policy" "eventbridge_policy" {
         Effect = "Allow"
         Action = [
           "rds:StartDBInstance",
-          "rds:StopDBInstance"
+          "rds:StopDBInstance",
+          "rds:DescribeDBInstances"
         ]
         Resource = aws_db_instance.fred.arn
       }

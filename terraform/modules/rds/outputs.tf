@@ -3,7 +3,11 @@ output "instance_id" {
   value       = aws_db_instance.fred.id
 }
 
-output "endpoint" {
+output "db_endpoint" {
   description = "Endpoint of the RDS instance"
   value       = aws_db_instance.fred.endpoint
+}
+
+output "security_group_id" {
+  value = aws_security_group.rds.id
 }

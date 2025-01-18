@@ -98,5 +98,27 @@ module "aggregate_job" {
   glue_assume_role_policy = data.aws_iam_policy_document.glue_base_policy.json
   glue_access_policy      = data.aws_iam_policy_document.glue_access_policy.json
   scripts_bucket_id       = aws_s3_bucket.scripts.id
-  glue_role_arn          = aws_iam_role.glue_role.arn
+  glue_role_arn           = aws_iam_role.glue_role.arn
+}
+
+module "serving" {
+  source = "./jobs/serving"
+
+  project                 = var.project
+  data_lake_name          = var.data_lake_name
+  glue_scripts_bucket     = var.glue_scripts_bucket
+  python_version          = var.python_version
+  glue_role_arn           = aws_iam_role.glue_role.arn
+  glue_assume_role_policy = data.aws_iam_policy_document.glue_base_policy.json
+  glue_access_policy      = data.aws_iam_policy_document.glue_access_policy.json
+  db_host                 = var.db_host
+  db_name                 = var.db_name
+  db_username             = var.db_username
+  db_password             = var.db_password
+  start_year              = var.start_year
+  start_month             = var.start_month
+  vpc_id                 = var.vpc_id
+  private_subnet_id      = var.private_subnet_id
+  private_subnet_az      = var.private_subnet_az
+  glue_security_group_id = var.glue_security_group_id
 }

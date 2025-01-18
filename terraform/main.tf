@@ -95,12 +95,18 @@ module "glue" {
   environment         = var.environment
   region              = var.region
   vpc_id              = module.networking.vpc_id
+  private_subnet_id   = module.networking.private_subnet_ids[0]
+  private_subnet_az   = module.networking.private_subnet_azs[0]
+  glue_security_group_id   = aws_security_group.glue.id
   data_lake_name      = var.data_lake_name
   glue_scripts_bucket = var.glue_scripts_bucket
   python_version      = var.python_version
   timeout             = var.timeout
   fred_api_key        = var.fred_api_key
-  security_group_id   = aws_security_group.glue.id
+  db_name             = var.db_name
+  db_username         = var.db_username
+  db_password         = var.db_password
+  db_host             = module.rds.db_endpoint
 }
 
 module "monitoring" {

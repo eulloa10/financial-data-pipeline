@@ -44,4 +44,7 @@ resource "aws_budgets_budget" "cost" {
     notification_type         = "ACTUAL"
     subscriber_email_addresses = [var.alert_email]
   }
+  lifecycle {
+    ignore_changes = [time_period_start]
+  }
 }

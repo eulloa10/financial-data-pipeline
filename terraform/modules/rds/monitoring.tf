@@ -1,11 +1,11 @@
 # SNS Topic for RDS notifications
-resource "aws_sns_topic" "rds_events" {
-  name = "${var.project}-rds-events"
+resource "aws_sns_topic" "fred_rds_events" {
+  name = "${var.project}-fred_rds-events"
 }
 
 # SNS Topic subscription for email notifications
-resource "aws_sns_topic_subscription" "rds_events_email" {
-  topic_arn = aws_sns_topic.rds_events.arn
+resource "aws_sns_topic_subscription" "fred_rds_events_email" {
+  topic_arn = aws_sns_topic.fred_rds_events.arn
   protocol  = "email"
   endpoint  = var.alert_email
 }
@@ -37,7 +37,7 @@ resource "aws_cloudwatch_event_rule" "rds_state_change" {
 resource "aws_cloudwatch_event_target" "rds_state_change" {
   rule      = aws_cloudwatch_event_rule.rds_state_change.name
   target_id = "SendToSNS"
-  arn       = aws_sns_topic.rds_events.arn
+  arn       = aws_sns_topic.fred_rds_events.arn
 
   input_transformer {
     input_paths = {
@@ -60,7 +60,7 @@ resource "aws_cloudwatch_metric_alarm" "rds_status_check" {
   statistic          = "Maximum"
   threshold          = "0"
   alarm_description  = "This metric monitors RDS instance status"
-  alarm_actions      = [aws_sns_topic.rds_events.arn]
+  alarm_actions      = [aws_sns_topic.fred_rds_events.arn]
 
   dimensions = {
     DBInstanceIdentifier = aws_db_instance.fred.id
@@ -78,7 +78,7 @@ resource "aws_cloudwatch_metric_alarm" "rds_startup_time" {
   statistic          = "Minimum"
   threshold          = "600"  # 10 minutes
   alarm_description  = "Alert if RDS takes too long to start"
-  alarm_actions      = [aws_sns_topic.rds_events.arn]
+  alarm_actions      = [aws_sns_topic.fred_rds_events.arn]
 
   dimensions = {
     DBInstanceIdentifier = aws_db_instance.fred.id
