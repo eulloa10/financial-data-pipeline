@@ -31,9 +31,7 @@ resource "aws_glue_job" "load_indicators_to_rds" {
       "--SRC_BUCKET"      = "${var.project}-${var.data_lake_name}"
       "--SRC_PREFIX"      = "aggregated_data"
       "--START_YEAR"      = var.start_year
-      "--START_MONTH"     = var.start_month
       "--END_YEAR"        = var.end_year    # Optional
-      "--END_MONTH"       = var.end_month   # Optional
       "--INDICATOR"       = var.indicator   # Optional
       "--DB_HOST"         = var.db_host
       "--DB_NAME"         = var.db_name
@@ -41,7 +39,7 @@ resource "aws_glue_job" "load_indicators_to_rds" {
       "--DB_PASSWORD"     = var.db_password
       "--DB_PORT"         = "5432"
       "--TABLE_NAME"      = "economic_indicators"
-      "--additional-python-modules" = "psycopg2-binary"
+      "--extra-jars"      = "s3://aws-glue-studio-transforms-lib/postgresql-42.5.2.jar"
   }
 
     execution_property {

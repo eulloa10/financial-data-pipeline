@@ -2,6 +2,13 @@ resource "aws_security_group" "glue" {
   name        = "${var.project}-${var.environment}-glue-sg"
   description = "Security group for Glue jobs"
   vpc_id      = module.networking.vpc_id
+
+  ingress {
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    self      = true  # Allows all traffic from the same security group
+  }
   egress {
     from_port   = 0
     to_port     = 0

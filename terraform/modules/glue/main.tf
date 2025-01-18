@@ -116,7 +116,6 @@ module "serving" {
   db_username             = var.db_username
   db_password             = var.db_password
   start_year              = var.start_year
-  start_month             = var.start_month
   vpc_id                 = var.vpc_id
   private_subnet_id      = var.private_subnet_id
   private_subnet_az      = var.private_subnet_az

@@ -5,7 +5,7 @@ output "instance_id" {
 
 output "db_endpoint" {
   description = "Endpoint of the RDS instance"
-  value       = aws_db_instance.fred.endpoint
+  value       = split(":", aws_db_instance.fred.endpoint)[0] # Remove the port number
 }
 
 output "security_group_id" {

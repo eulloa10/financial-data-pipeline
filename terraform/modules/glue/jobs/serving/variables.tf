@@ -83,19 +83,8 @@ variable "start_year" {
   type        = number
 }
 
-variable "start_month" {
-  description = "The start month for the data"
-  type        = number
-}
-
 variable "end_year" {
   description = "The end year for the data"
-  type        = number
-  default     = null
-}
-
-variable "end_month" {
-  description = "The end month for the data"
   type        = number
   default     = null
 }
