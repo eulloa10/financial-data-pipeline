@@ -84,13 +84,14 @@ module "rds" {
   environment               = var.environment
   region                    = var.region
   vpc_id                    = module.networking.vpc_id
-  private_subnet_ids        = module.networking.private_subnet_ids
   db_name                   = var.db_name
   db_username               = var.db_username
   db_password               = var.db_password
   instance_class            = var.db_instance_class
   glue_security_group_id    = aws_security_group.glue.id
   alert_email               = var.alert_email
+  public_subnet_ids         = module.networking.public_subnet_ids
+  allowed_rds_ips           = var.allowed_rds_ips
 
   depends_on = [module.networking]
 }

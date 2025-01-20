@@ -72,6 +72,12 @@ variable "allowed_ips" {
   type        = list(string)
 }
 
+variable "allowed_rds_ips" {
+  description = "List of IPs allowed to access RDS"
+  type        = list(string)
+  sensitive   = true
+}
+
 variable "key_name" {
   description = "SSH key name"
   type        = string

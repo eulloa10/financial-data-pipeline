@@ -47,49 +47,34 @@ class SparkManager:
             return 0
 
         try:
-            jdbc_url = f"jdbc:postgresql://{self.args['DB_HOST']}:{self.args['DB_PORT']}/{self.args['DB_NAME']}"
+            db_host = self.args['DB_HOST'].split(':')[0]  # Remove port if present
+            jdbc_url = f"jdbc:postgresql://{db_host}:{self.args['DB_PORT']}/{self.args['DB_NAME']}"
 
-            # Write to temporary table
-            temp_table = f"{table_name}_temp"
+            # Create temporary view of the DataFrame
+            df.createOrReplaceTempView("source_data")
 
-            df.write \
-                .format("jdbc") \
-                .option("url", jdbc_url) \
-                .option("dbtable", temp_table) \
-                .option("user", self.args['DB_USER']) \
-                .option("password", self.args['DB_PASSWORD']) \
-                .option("driver", "org.postgresql.Driver") \
-                .mode("overwrite") \
-                .save()
-
-            # Perform upsert using SQL
-            upsert_query = f"""
-                INSERT INTO {table_name} (
-                    indicator,
-                    observation_year,
-                    observation_month,
-                    observation_value
-                )
-                SELECT
-                    indicator,
-                    observation_year,
-                    observation_month,
-                    observation_value
-                FROM {temp_table}
-                ON CONFLICT (indicator, observation_year, observation_month)
-                DO UPDATE SET
-                    observation_value = EXCLUDED.observation_value,
-                    created_at = CURRENT_TIMESTAMP;
-                DROP TABLE {temp_table};
+            # Execute upsert using Spark SQL
+            upsert_sql = f"""
+            INSERT INTO {table_name} (
+                indicator,
+                observation_year,
+                observation_month,
+                observation_value
+            )
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT (indicator, observation_year, observation_month)
+            DO UPDATE SET
+                observation_value = EXCLUDED.observation_value,
+                created_at = CURRENT_TIMESTAMP
             """
 
+            # Write directly to the target table with upsert logic
             df.write \
                 .format("jdbc") \
                 .option("url", jdbc_url) \
+                .option("dbtable", table_name) \
                 .option("user", self.args['DB_USER']) \
                 .option("password", self.args['DB_PASSWORD']) \
-                .option("driver", "org.postgresql.Driver") \
-                .option("query", upsert_query) \
                 .mode("append") \
                 .save()
 

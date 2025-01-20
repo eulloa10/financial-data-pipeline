@@ -11,3 +11,18 @@ output "db_endpoint" {
 output "security_group_id" {
   value = aws_security_group.rds.id
 }
+
+output "rds_hostname" {
+  description = "Hostname of the RDS instance"
+  value       = aws_db_instance.fred.address
+}
+
+output "rds_port" {
+  description = "Port of the RDS instance"
+  value       = aws_db_instance.fred.port
+}
+
+output "rds_username" {
+  description = "Username for the RDS instance"
+  value       = aws_db_instance.fred.username
+}

@@ -39,7 +39,6 @@ resource "aws_glue_job" "load_indicators_to_rds" {
       "--DB_PASSWORD"     = var.db_password
       "--DB_PORT"         = "5432"
       "--TABLE_NAME"      = "economic_indicators"
-      "--extra-jars"      = "s3://aws-glue-studio-transforms-lib/postgresql-42.5.2.jar"
   }
 
     execution_property {

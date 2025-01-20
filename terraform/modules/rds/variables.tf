@@ -18,8 +18,8 @@ variable "vpc_id" {
   type        = string
 }
 
-variable "private_subnet_ids" {
-  description = "List of private subnet IDs for RDS"
+variable "public_subnet_ids" {
+  description = "List of public subnet IDs for RDS"
   type        = list(string)
 }
 
@@ -205,4 +205,10 @@ variable "port" {
 variable "alert_email" {
   description = "Email address to receive RDS alerts"
   type        = string
+}
+
+variable "allowed_rds_ips" {
+  description = "List of IPs allowed to access RDS"
+  type        = list(string)
+  sensitive   = true
 }

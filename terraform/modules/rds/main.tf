@@ -4,7 +4,7 @@ data "aws_availability_zones" "available" {
 
 resource "aws_db_subnet_group" "main" {
   name       = "${var.project}-db-subnet-group"
-  subnet_ids = var.private_subnet_ids
+  subnet_ids = var.public_subnet_ids
 
   tags = {
     Name        = "${var.project}-db-subnet-group"
@@ -31,20 +31,16 @@ resource "aws_security_group" "rds" {
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
-    cidr_blocks = [
-      "64.18.0.0/20",
-      "64.233.160.0/19",
-      "66.102.0.0/20",
-      "66.249.80.0/20",
-      "72.14.192.0/18",
-      "74.125.0.0/16",
-      "108.177.8.0/21",
-      "173.194.0.0/16",
-      "207.126.144.0/20",
-      "209.85.128.0/17",
-      "216.239.32.0/19"
-    ]
+    cidr_blocks = var.allowed_rds_ips
     description = "Allow Looker Studio access"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
   }
 
   tags = {
