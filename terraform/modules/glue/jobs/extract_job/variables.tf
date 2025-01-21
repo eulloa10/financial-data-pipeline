@@ -90,3 +90,9 @@ variable "glue_role_arn" {
   description = "ARN of the Glue IAM role"
   type        = string
 }
+
+variable "indicator" {
+  description = "Optional comma-separated list of FRED indicators to process"
+  type        = string
+  default     = ""  # Empty string will process all indicators
+}
