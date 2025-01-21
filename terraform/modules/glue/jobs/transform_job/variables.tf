@@ -90,3 +90,9 @@ variable "scripts_bucket_id" {
   description = "ID of the scripts S3 bucket"
   type        = string
 }
+
+variable "indicator" {
+  description = "Optional comma-separated list of FRED indicators to process"
+  type        = string
+  default     = ""  # Empty string will process all indicators
+}

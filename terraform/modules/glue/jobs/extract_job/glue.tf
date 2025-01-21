@@ -1,5 +1,5 @@
 resource "aws_glue_job" "fred_ingestion_etl_job" {
-  name         = "${var.project}-fred-extract-job"
+  name         = "${var.project}-extract-job"
   role_arn     = var.glue_role_arn
   glue_version = var.glue_version
 

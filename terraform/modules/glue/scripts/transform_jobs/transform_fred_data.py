@@ -10,129 +10,209 @@ from awsglue.context import GlueContext
 from awsglue.job import Job
 import boto3
 
-# Logging setup
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-if not logger.handlers:
-    logger.addHandler(handler)
+# Default indicators list
+DEFAULT_INDICATORS = [
+    "DGS10", "EFFR", "CSUSHPINSA", "UNRATE", "CPIAUCSL",
+    "PCE", "JTSJOL", "JTSHIR", "JTSTSR", "PSAVERT", "CSCICP03USM665S"
+]
 
-# Spark and Glue context initialization
-sc = SparkContext()
-glueContext = GlueContext(sc)
-spark = glueContext.spark_session
+class Logger:
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
+        handler = logging.StreamHandler(sys.stdout)
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        if not self.logger.handlers:
+            self.logger.addHandler(handler)
 
-# Job arguments
-args = getResolvedOptions(sys.argv, [
-    'JOB_NAME', 'SRC_BUCKET', 'SRC_PREFIX', 'DEST_BUCKET', 'DEST_PREFIX', 'START_DATE', 'END_DATE'
-])
-job = Job(glueContext)
-job.init(args['JOB_NAME'], args)
+class S3Manager:
+    def __init__(self, bucket, prefix):
+        self.bucket = bucket
+        self.prefix = prefix
+        self.s3_client = boto3.client('s3')
+        self.logger = logging.getLogger(__name__)
 
-src_bucket = args['SRC_BUCKET']
-src_prefix = args['SRC_PREFIX']
-dest_bucket = args['DEST_BUCKET']
-dest_prefix = args['DEST_PREFIX']
+    def get_indicator_list(self):
+        """Fetches list of indicators from S3"""
+        indicators = []
+        paginator = self.s3_client.get_paginator('list_objects_v2')
+        first_level_prefix = f"{self.prefix}/"
 
-# Date parsing and validation
-try:
-    start_date = datetime.datetime.strptime(args['START_DATE'], '%Y-%m-%d').date()
-    end_date = datetime.datetime.strptime(args['END_DATE'], '%Y-%m-%d').date()
-    if start_date > end_date:
-        raise ValueError("START_DATE cannot be after END_DATE.")
-except ValueError as e:
-    logger.error(f"Invalid date format or range: {e}. Please use YYYY-MM-DD.")
-    sys.exit(1)
+        try:
+            second_level_pages = paginator.paginate(
+                Bucket=self.bucket,
+                Prefix=first_level_prefix,
+                Delimiter='/'
+            )
 
-s3 = boto3.client('s3')
+            for page in second_level_pages:
+                if 'CommonPrefixes' in page:
+                    for common_prefix in page['CommonPrefixes']:
+                        prefix = common_prefix['Prefix']
+                        if "indicator=" in prefix:
+                            indicator = prefix.split("indicator=")[-1].rstrip('/')
+                            indicators.append(indicator)
 
-def get_indicator_list_from_s3(bucket, prefix):
-    """
-    Fetches a list of indicators from the given bucket and prefix in S3.
+            return indicators
+        except Exception as e:
+            self.logger.error(f"Error fetching indicators: {e}")
+            raise
 
-    Args:
-        bucket (str): The name of the S3 bucket.
-        prefix (str): The prefix of the first-level folder ("raw_data/").
+class DataTransformer:
+    def __init__(self, spark_session):
+        self.spark = spark_session
+        self.logger = logging.getLogger(__name__)
 
-    Returns:
-        list: A list of indicator names.
-    """
-    indicators = []
-    s3 = boto3.client('s3')
-    paginator = s3.get_paginator('list_objects_v2')
+    def process_data(self, df, indicator, start_date, end_date):
+        return (
+            df.filter(F.col("value") != ".")
+            .filter(F.col("date").between(start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')))
+            .withColumn("observation_value", F.col("value").cast(DoubleType()))
+            .withColumn("observation_value", F.round("observation_value", 2))
+            .withColumnRenamed("date", "observation_date")
+            .drop("value", "realtime_end", "realtime_start")
+            .withColumn("indicator", F.lit(indicator))
+            .withColumn("observation_year", F.year("observation_date").cast(IntegerType()))
+            .withColumn("observation_month", F.month("observation_date").cast(IntegerType()))
+        )
 
-    first_level_prefix = f"{prefix}/"
+    def transform_and_save(self, indicator, src_bucket, src_prefix, dest_bucket, dest_prefix, start_date, end_date):
+        try:
+            input_path = f"s3://{src_bucket}/{src_prefix}/indicator={indicator}"
+            self.logger.info(f"Reading data from: {input_path}")
+            filtered_df = self.spark.read.json(input_path)
 
-    # Paginate over the second-level prefixes under the first-level prefix
-    logger.info(f"Fetching second-level prefixes under {first_level_prefix}")
-    second_level_pages = paginator.paginate(Bucket=bucket, Prefix=first_level_prefix, Delimiter='/')
+            transformed_df = self.process_data(filtered_df, indicator, start_date, end_date)
 
-    for page in second_level_pages:
-        if 'CommonPrefixes' in page:
-            for common_prefix in page['CommonPrefixes']:
-                prefix = common_prefix['Prefix']
-                logger.info(f"Processing prefix: {prefix}")
+            if transformed_df.count() > 0:
+                output_base_path = f"s3://{dest_bucket}/{dest_prefix}/indicator={indicator}"
 
-                # Extract the indicator name from the prefix
-                if "indicator=" in prefix:
-                    indicator = prefix.split("indicator=")[-1].rstrip('/')
-                    indicators.append(indicator)
-                else:
-                    logger.warning(f"Unexpected prefix format: {prefix}")
-        else:
-            logger.warning(f"No CommonPrefixes found in page: {page}")
+                # Write only to specific year partitions
+                for year in range(start_date.year, end_date.year + 1):
+                    year_data = transformed_df.filter(F.col("observation_year") == year)
+                    if year_data.count() > 0:
+                        output_path = f"{output_base_path}/observation_year={year}"
 
+                        months = year_data.select('observation_month').distinct().collect()
+                        self.logger.info(f"Processing {len(months)} months for {indicator} year {year}")
+
+                        # Write to specific year partition
+                        year_data.write \
+                            .partitionBy("observation_month") \
+                            .mode("overwrite") \
+                            .parquet(output_path)
+
+                        for month in months:
+                            self.logger.info(f"Processed month {month.observation_month} for {indicator} year {year}")
+                        self.logger.info(f"Data transformed for {indicator} year {year}")
+
+                return True
+            else:
+                self.logger.info(f"No data found for {indicator} between {start_date} and {end_date}")
+                return False
+        except Exception as e:
+            self.logger.error(f"Error transforming {indicator}: {e}")
+            return False
+
+def validate_indicators(indicators):
+    """Validate that provided indicators exist in the default list"""
+    invalid_indicators = [ind for ind in indicators if ind not in DEFAULT_INDICATORS]
+    if invalid_indicators:
+        raise ValueError(f"Invalid indicators provided: {invalid_indicators}")
     return indicators
 
-indicator_list = get_indicator_list_from_s3(src_bucket, src_prefix)
+def parse_indicators(indicator_param):
+    """Parse and validate indicator parameter"""
+    if not indicator_param or indicator_param.strip() == '':
+        return DEFAULT_INDICATORS
 
-if not indicator_list:
-    logger.error("Could not retrieve indicator list from S3. Exiting.")
-    sys.exit(1)
+    indicators = [ind.strip() for ind in indicator_param.split(',') if ind.strip()]
+    if not indicators:
+        return DEFAULT_INDICATORS
 
-logger.info(f"Indicators found: {indicator_list}")
+    return validate_indicators(indicators)
 
-def process_data(df):
-    return (
-        df.filter(F.col("value") != ".")  # Early filtering
-        .withColumn("observation_value", F.col("value").cast(DoubleType()))
-        .withColumn("observation_value", F.round("observation_value", 2))  # Use round
-        .withColumnRenamed("date", "observation_date")
-        .drop("value", "realtime_end", "realtime_start")
-        .withColumn("indicator", F.lit(indicator))
-        .withColumn("observation_year", F.year("observation_date").cast(IntegerType()))
-        .withColumn("observation_month", F.month("observation_date").cast(IntegerType()))
-    )
+def main():
+    logger_setup = Logger()
+    logger = logging.getLogger(__name__)
 
-def next_month(current_date):
-    if current_date.month == 12:
-        return date(current_date.year + 1, 1, 1)
-    else:
-        return date(current_date.year, current_date.month + 1, 1)
+    try:
+        # Initialize Spark/Glue
+        sc = SparkContext()
+        glueContext = GlueContext(sc)
+        spark = glueContext.spark_session
+        job = Job(glueContext)
 
-for indicator in indicator_list:
-    current_date = date(start_date.year, start_date.month, 1)
-    end_loop = date(end_date.year, end_date.month, 1)
-    while current_date <= end_loop:
-        input_path = f"s3://{src_bucket}/{src_prefix}/indicator={indicator}"
+        # Get job parameters
+        args = getResolvedOptions(sys.argv, [
+            'JOB_NAME',
+            'SRC_BUCKET',
+            'SRC_PREFIX',
+            'DEST_BUCKET',
+            'DEST_PREFIX',
+            'START_DATE',
+            'END_DATE',
+            'INDICATOR'
+        ])
+
+        job.init(args['JOB_NAME'], args)
+
+        # Parse dates
         try:
-            filtered_df = spark.read.json(input_path)
-            logger.info(f"Read data from: {input_path}")
+            start_date = datetime.datetime.strptime(args['START_DATE'], '%Y-%m-%d').date()
+            end_date = datetime.datetime.strptime(args['END_DATE'], '%Y-%m-%d').date()
+            if start_date > end_date:
+                raise ValueError("START_DATE cannot be after END_DATE.")
+        except ValueError as e:
+            logger.error(f"Invalid date format or range: {e}")
+            sys.exit(1)
 
-            transformed_df = process_data(filtered_df)
+        # Initialize components
+        s3_manager = S3Manager(args['SRC_BUCKET'], args['SRC_PREFIX'])
+        transformer = DataTransformer(spark)
 
-            output_path = f"s3://{dest_bucket}/{dest_prefix}/indicator={indicator}"
+        # Parse indicators
+        try:
+            indicators_to_process = parse_indicators(args['INDICATOR'])
+            logger.info(f"Processing indicators: {indicators_to_process}")
+        except ValueError as e:
+            logger.error(f"Invalid indicators provided: {e}")
+            sys.exit(1)
 
-            transformed_df.write.mode("overwrite") \
-                .partitionBy("observation_year", "observation_month") \
-                .parquet(output_path)
-            logger.info(f"Data for indicator {indicator} - {current_date.strftime('%Y-%m')} transformed and saved.")
+        # Process data
+        successful_transforms = 0
+        failed_transforms = 0
 
-        except Exception as e:
-            logger.warning(f"Error processing data: {e}")
+        for indicator in indicators_to_process:
+            success = transformer.transform_and_save(
+                indicator,
+                args['SRC_BUCKET'],
+                args['SRC_PREFIX'],
+                args['DEST_BUCKET'],
+                args['DEST_PREFIX'],
+                start_date,
+                end_date
+            )
 
-        current_date = next_month(current_date)
+            if success:
+                successful_transforms += 1
+            else:
+                failed_transforms += 1
 
-job.commit()
+        # Log results
+        logger.info(
+            f"Job completed. "
+            f"Successful transforms: {successful_transforms}/{len(indicators_to_process)} indicators. "
+            f"Failed transforms: {failed_transforms}/{len(indicators_to_process)}. "
+        )
+
+        job.commit()
+
+    except Exception as e:
+        logger.error(f"Job failed: {e}")
+        logger.error(traceback.format_exc())
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
