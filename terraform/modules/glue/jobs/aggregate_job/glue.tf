@@ -17,7 +17,7 @@ resource "aws_glue_job" "fred_aggregate_etl_job" {
     "--START_YEAR"      = var.observation_start_year
     "--END_YEAR"        = var.observation_end_year
     "--API_KEY"         = var.fred_api_key
-    "--INDICATOR"      = " "
+    "--INDICATORS"      = " "
   }
 
   execution_property {

@@ -94,23 +94,18 @@ class DataTransformer:
                     if year_data.count() > 0:
                         output_path = f"{output_base_path}/observation_year={year}"
 
-                        months = year_data.select('observation_month').distinct().collect()
-                        self.logger.info(f"Processing {len(months)} months for {indicator} year {year}")
-
-                        # Write to specific year partition
+                        # Write to specific year partition with month partitioning
                         year_data.write \
                             .partitionBy("observation_month") \
                             .mode("overwrite") \
                             .parquet(output_path)
 
-                        for month in months:
-                            self.logger.info(f"Processed month {month.observation_month} for {indicator} year {year}")
                         self.logger.info(f"Data transformed for {indicator} year {year}")
 
-                return True
-            else:
-                self.logger.info(f"No data found for {indicator} between {start_date} and {end_date}")
-                return False
+                        return True
+                    else:
+                        self.logger.info(f"No data found for {indicator} between {start_date} and {end_date}")
+                        return False
         except Exception as e:
             self.logger.error(f"Error transforming {indicator}: {e}")
             return False
@@ -153,7 +148,7 @@ def main():
             'DEST_PREFIX',
             'START_DATE',
             'END_DATE',
-            'INDICATOR'
+            'INDICATORS'
         ])
 
         job.init(args['JOB_NAME'], args)
@@ -174,7 +169,7 @@ def main():
 
         # Parse indicators
         try:
-            indicators_to_process = parse_indicators(args['INDICATOR'])
+            indicators_to_process = parse_indicators(args['INDICATORS'])
             logger.info(f"Processing indicators: {indicators_to_process}")
         except ValueError as e:
             logger.error(f"Invalid indicators provided: {e}")

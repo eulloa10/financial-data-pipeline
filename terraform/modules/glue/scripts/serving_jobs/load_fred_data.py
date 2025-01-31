@@ -42,18 +42,37 @@ class SparkManager:
             return None
 
     def write_to_postgres(self, df, table_name):
-        """Write DataFrame to PostgreSQL using JDBC"""
+        """Write DataFrame to PostgreSQL using JDBC and perform upsert operation using Java JDBC."""
         if df is None or df.rdd.isEmpty():
             return 0
 
         try:
+            self.logger.info("Starting write_to_postgres")
+
             db_host = self.args['DB_HOST'].split(':')[0]  # Remove port if present
             jdbc_url = f"jdbc:postgresql://{db_host}:{self.args['DB_PORT']}/{self.args['DB_NAME']}"
 
-            # Create temporary view of the DataFrame
-            df.createOrReplaceTempView("source_data")
+            # Write the DataFrame to a temporary table
+            temp_table = f"{table_name}_temp"
 
-            # Execute upsert using Spark SQL
+            self.logger.info(f"Writing data to temporary table {temp_table}")
+            df.write \
+                .format("jdbc") \
+                .option("url", jdbc_url) \
+                .option("dbtable", temp_table) \
+                .option("user", self.args['DB_USER']) \
+                .option("password", self.args['DB_PASSWORD']) \
+                .option("driver", "org.postgresql.Driver") \
+                .mode("overwrite") \
+                .save()
+
+            # Use PySpark's ability to access Java JDBC to execute the upsert
+            self.logger.info("Executing upsert operation using Java JDBC")
+            jvm = self.sc._jvm
+            DriverManager = jvm.java.sql.DriverManager
+            conn = DriverManager.getConnection(jdbc_url, self.args['DB_USER'], self.args['DB_PASSWORD'])
+            stmt = conn.createStatement()
+
             upsert_sql = f"""
             INSERT INTO {table_name} (
                 indicator,
@@ -61,26 +80,27 @@ class SparkManager:
                 observation_month,
                 observation_value
             )
-            VALUES (?, ?, ?, ?)
+            SELECT
+                indicator,
+                observation_year,
+                observation_month,
+                observation_value
+            FROM {temp_table}
             ON CONFLICT (indicator, observation_year, observation_month)
             DO UPDATE SET
-                observation_value = EXCLUDED.observation_value,
-                created_at = CURRENT_TIMESTAMP
+                observation_value = EXCLUDED.observation_value;
+            DROP TABLE IF EXISTS {temp_table};
             """
+            stmt.execute(upsert_sql)
+            stmt.close()
+            conn.close()
 
-            # Write directly to the target table with upsert logic
-            df.write \
-                .format("jdbc") \
-                .option("url", jdbc_url) \
-                .option("dbtable", table_name) \
-                .option("user", self.args['DB_USER']) \
-                .option("password", self.args['DB_PASSWORD']) \
-                .mode("append") \
-                .save()
-
+            self.logger.info("Successfully completed upsert operation")
             return df.count()
+
         except Exception as e:
             self.logger.error(f"Error writing to PostgreSQL: {str(e)}")
+            self.logger.error(traceback.format_exc())
             raise
 
 class S3Manager:

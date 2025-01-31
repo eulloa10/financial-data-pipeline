@@ -130,11 +130,9 @@ class DataProcessor:
             self.logger.error(traceback.format_exc())
             raise
 
-    def process_indicator_data(self, indicator, year):
+    def process_indicator_data(self, indicator, year, df):
         self.logger.info(f"Processing data for indicator {indicator}, year {year}")
         try:
-            df = self.read_yearly_data(indicator, year)
-
             if df is None:
                 self.logger.warning(f"No data to process for indicator {indicator}, year {year}")
                 return None
@@ -200,7 +198,7 @@ class GlueJobManager:
     def initialize_job(self):
         required_args = [
             'JOB_NAME', 'SRC_BUCKET', 'SRC_PREFIX', 'DEST_BUCKET',
-            'DEST_PREFIX', 'START_YEAR', 'END_YEAR', 'INDICATOR'
+            'DEST_PREFIX', 'START_YEAR', 'END_YEAR', 'INDICATORS'
         ]
         self.args = getResolvedOptions(sys.argv, required_args)
         self.job = Job(self.glue_context)
@@ -251,7 +249,7 @@ def main():
         if not available_indicators:
             raise ValueError("No indicators found in S3. Exiting.")
 
-        indicator_list = parse_indicators(args['INDICATOR'], available_indicators)
+        indicator_list = parse_indicators(args['INDICATORS'], available_indicators)
         logger.info(f"Processing {len(indicator_list)} indicators for years {start_year} to {end_year}")
 
         successful_processes = 0
@@ -263,17 +261,29 @@ def main():
             for year in range(start_year, end_year + 1):
                 try:
                     logger.info(f"Processing year: {year}")
-                    yearly_data = data_processor.process_indicator_data(indicator, year)
-                    if yearly_data is not None:
-                        data_processor.write_yearly_data(yearly_data, indicator, year)
-                        successful_processes += 1
-                        logger.info(f"Successfully processed {indicator} for year {year}")
-                    else:
+                    yearly_data = data_processor.read_yearly_data(indicator, year)
+                    if yearly_data is None:
                         failed_processes += 1
-                        logger.warning(f"No data processed for indicator {indicator}, year {year}")
+                        logger.warning(f"No data found for indicator {indicator}, year {year}")
+                        continue
+
+                    processed_months = yearly_data.select("observation_year", "observation_month").distinct().collect()
+
+                    for row in processed_months:
+                        month = row.observation_month
+                        monthly_data = yearly_data.filter((F.col("observation_year") == year) & (F.col("observation_month") == month))
+                        processed_data = data_processor.process_indicator_data(indicator, year, monthly_data)
+                        if processed_data is not None:
+                            data_processor.write_yearly_data(processed_data, indicator, year)
+                            successful_processes += 1
+                            logger.info(f"Successfully processed {indicator} for year {year}, Month {month}")
+                        else:
+                            logger.warning(f"No data processed for indicator {indicator}, year {year}, Month {month}")
+
                 except Exception as e:
                     failed_processes += 1
                     logger.error(f"Failed processing {indicator} for year {year}: {str(e)}")
+                    logger.error(traceback.format_exc()) # Include traceback here
                     continue
 
         logger.info(f"Job completed. Success: {successful_processes}/{total_processes}, Failed: {failed_processes}/{total_processes}")
@@ -281,7 +291,7 @@ def main():
 
     except Exception as e:
         logger.error(f"Job failed: {e}")
-        logger.error(traceback.format_exc())
+        logger.error(traceback.format_exc()) # Include traceback here
         sys.exit(1)
 
 if __name__ == "__main__":

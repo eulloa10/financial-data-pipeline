@@ -16,7 +16,7 @@ resource "aws_glue_job" "fred_transform_etl_job" {
     "--DEST_PREFIX"     = "processed_data"
     "--START_DATE"      = var.observation_start_date
     "--END_DATE"        = var.observation_end_date
-    "--INDICATOR"       = var.indicator != "" ? var.indicator : " "  # Optional indicator parameter
+    "--INDICATORS"       = var.indicator != "" ? var.indicator : " "  # Optional indicator parameter
   }
 
   execution_property {

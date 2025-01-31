@@ -10,12 +10,9 @@ resource "aws_glue_job" "fred_ingestion_etl_job" {
   }
 
   default_arguments = {
-    "--RAW_DATA_BUCKET" = "${var.project}-${var.data_lake_name}"
-    "--TARGET_PATH"     = "raw_data"
-    "--START_DATE"      = var.observation_start_date
-    "--END_DATE"        = var.observation_end_date
-    "--API_KEY"         = var.fred_api_key
-    "--INDICATOR"       = var.indicator != "" ? var.indicator: " " # Optional - will process all indicators if not provided
+    "--RAW_DATA_BUCKET"         = "${var.project}-${var.data_lake_name}"
+    "--TARGET_PATH"             = "raw_data"
+    "--API_KEY"                 = var.fred_api_key
   }
 
   execution_property {

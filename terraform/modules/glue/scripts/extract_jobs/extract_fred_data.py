@@ -1,247 +1,129 @@
-import boto3
-import requests
-from datetime import datetime, timezone
 import sys
-import pandas as pd
+from awsglue.transforms import *
+from awsglue.context import GlueContext
+from awsglue.job import Job
 from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
-from awsglue.context import GlueContext
-from awsglue.dynamicframe import DynamicFrame
-from awsglue.job import Job
+import requests
+from datetime import datetime, timezone
+from urllib.parse import urlencode
 import logging
-from pyspark.sql.functions import lit
+from pyspark.sql.functions import col
 
-# Default indicators list
-DEFAULT_INDICATORS = [
-    "DGS10", "EFFR", "CSUSHPINSA", "UNRATE", "CPIAUCSL",
-    "PCE", "JTSJOL", "JTSHIR", "JTSTSR", "PSAVERT", "CSCICP03USM665S"
-]
 
-class Logger:
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.INFO)
-        handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        if not self.logger.handlers:
-            self.logger.addHandler(handler)
+args = getResolvedOptions(sys.argv, ['JOB_NAME', 'API_KEY', 'RAW_DATA_BUCKET', 'TARGET_PATH', 'OBSERVATION_START_DATE',
+    'OBSERVATION_END_DATE',
+    'INDICATOR'])
 
-class FREDDataExtractor:
-    def __init__(self, api_key):
-        self.api_key = api_key
-        self.logger = logging.getLogger(__name__)
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
-    def extract_data(self, series_id, start_date, end_date):
-        url = f"https://api.stlouisfed.org/fred/series/observations"
-        params = {
-            'series_id': series_id,
-            'api_key': self.api_key,
-            'file_type': 'json',
-            'observation_start': start_date,
-            'observation_end': end_date
-        }
-        try:
-            response = requests.get(url, params=params)
-            response.raise_for_status()
-            self.logger.info(f"Successfully retrieved data for {series_id}")
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            self.logger.error(f"Error fetching data for {series_id}: {e}")
-            return None
+handler = logging.StreamHandler(sys.stdout)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
-class S3Manager:
-    def __init__(self, bucket_name, target_path):
-        self.bucket_name = bucket_name
-        self.target_path = target_path
-        self.s3_client = boto3.client('s3')
-        self.logger = logging.getLogger(__name__)
+logger.info(f"Arguments received: {args}")
 
-    def check_data_exists(self, indicator, year, month):
-        s3_key_prefix = f"{self.target_path}/indicator={indicator}/observation_year={year}/observation_month={month:02d}/"
-        try:
-            response = self.s3_client.list_objects_v2(
-                Bucket=self.bucket_name,
-                Prefix=s3_key_prefix
-            )
-            return 'Contents' in response
-        except Exception as e:
-            self.logger.error(f"Error checking for existing files: {e}")
-            return False
+sc = SparkContext.getOrCreate()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
 
-class DataProcessor:
-    def __init__(self, glue_context, bucket_name, target_path):
-        self.glue_context = glue_context
-        self.spark = glue_context.spark_session
-        self.bucket_name = bucket_name
-        self.target_path = target_path
-        self.logger = logging.getLogger(__name__)
+api_key = args['API_KEY']
+raw_data_bucket = args['RAW_DATA_BUCKET']
+target_path = args['TARGET_PATH']
+observation_start_date = args["OBSERVATION_START_DATE"]
+observation_end_date = args["OBSERVATION_END_DATE"]
+indicator = args["INDICATOR"]
 
-    def process_and_store_data(self, observations, indicator, year, month):
-        try:
-            ingestion_timestamp = datetime.now(timezone.utc).isoformat()
+logger.info(f"Observation start date: {observation_start_date}")
+logger.info(f"Observation end date: {observation_end_date}")
+logger.info(f"Indicator: {indicator}")
 
-            # Add additional columns
-            for observation in observations:
-                observation['indicator'] = indicator
-                observation['observation_year'] = year
-                observation['observation_month'] = month
-                observation['ingestion_timestamp'] = ingestion_timestamp
-
-            # Create and process DataFrame
-            df = self.spark.createDataFrame(observations).coalesce(1)
-            dynamic_frame = DynamicFrame.fromDF(df, self.glue_context, "fred_data")
-
-            # Write to S3
-            self.glue_context.write_dynamic_frame.from_options(
-                frame=dynamic_frame,
-                connection_type="s3",
-                connection_options={
-                    "path": f"s3://{self.bucket_name}/{self.target_path}",
-                    "partitionKeys": ["indicator", "observation_year", "observation_month"]
-                },
-                format="json"
-            )
-            self.logger.info(f"Data stored for {indicator} {year}-{month:02d}")
-            return True
-        except Exception as e:
-            self.logger.error(f"Error processing data: {e}")
-            return False
-
-def validate_indicators(indicators):
-    """
-    Validate that provided indicators exist in the default list
-    """
-    invalid_indicators = [ind for ind in indicators if ind not in DEFAULT_INDICATORS]
-    if invalid_indicators:
-        raise ValueError(f"Invalid indicators provided: {invalid_indicators}")
-    return indicators
-
-def parse_indicators(indicator_param):
-    """
-    Parse and validate indicator parameter
-    Returns list of indicators to process
-    """
-
-    if not indicator_param or indicator_param.strip() == '':
-        return DEFAULT_INDICATORS
-
-    indicators = [ind.strip() for ind in indicator_param.split(',') if ind.strip()]
-
-    if not indicators:
-        return DEFAULT_INDICATORS
-
-    return validate_indicators(indicators)
-
-def main():
-    # Initialize logger
-    logger_setup = Logger()
-    logger = logging.getLogger(__name__)
-
+# Function to fetch data from the API
+def fetch_data(indicator, api_key, start_date, end_date):
+    base_url = "https://api.stlouisfed.org/fred/series/observations"
+    params = {
+        "series_id": indicator,
+        "api_key": api_key,
+        "file_type": "json",
+        "observation_start": start_date,
+        "observation_end": end_date
+    }
+    url = f"{base_url}?{urlencode(params)}"
     try:
-        # Initialize Spark/Glue
-        sc = SparkContext.getOrCreate()
-        glue_context = GlueContext(sc)
-        job = Job(glue_context)
+        logger.info(f"Fetching data for {indicator} from {start_date} to {end_date}")
+        response = requests.get(url)
+        response.raise_for_status()
+        logger.info(f"Successfully fetched data for {indicator}")
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching data for {indicator}: {e}")
+        return None
 
-        # Get job parameters
-        args = getResolvedOptions(sys.argv, [
-            "JOB_NAME",
-            "RAW_DATA_BUCKET",
-            "TARGET_PATH",
-            "START_DATE",
-            "END_DATE",
-            "API_KEY",
-            "INDICATOR"
-        ])
+# Function to transform data into structured format
+def transform_data(data, indicator):
+    logger.info(f"Transforming data for {indicator}")
+    if data is None:
+        logger.info("No data to transform")
+        return []
 
-        job.init(args["JOB_NAME"], args)
+    observations = data.get("observations", [])
+    transformed_data = []
+    ingestion_timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
-        # Optional indicator parameter
-        indicator_param = args["INDICATOR"]
-
-        # Parse and validate indicators
+    for obs in observations:
+        date_str = obs['date']
         try:
-            indicators_to_process = parse_indicators(indicator_param)
-            logger.info(f"Processing indicators: {indicators_to_process}")
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+            transformed_data.append({
+                "indicator": indicator,
+                "observation_year": date_obj.year,
+                "observation_month": date_obj.month,
+                "observation_date": date_str,
+                "value": obs['value'],
+                "ingestion_timestamp": ingestion_timestamp
+            })
         except ValueError as e:
-            logger.error(f"Invalid indicators provided: {e}")
-            sys.exit(1)
+            logger.error(f"Error parsing date '{date_str}' for {indicator}: {e}")
+            return None
+    return transformed_data
 
-        # Initialize components
-        extractor = FREDDataExtractor(args["API_KEY"])
-        s3_manager = S3Manager(args["RAW_DATA_BUCKET"], args["TARGET_PATH"])
-        processor = DataProcessor(glue_context, args["RAW_DATA_BUCKET"], args["TARGET_PATH"])
-
-        # Process date range
-        try:
-            start_date = datetime.strptime(args["START_DATE"], '%Y-%m-%d').date()
-            end_date = datetime.strptime(args["END_DATE"], '%Y-%m-%d').date()
-            date_range = pd.date_range(start=start_date, end=end_date, freq='MS')
-        except ValueError as e:
-            logger.error(f"Error parsing dates: {e}. Please use YYYY-MM-DD format.")
-            sys.exit(1)
-
-        # Track processing statistics
-        successful_indicators = 0
-        failed_indicators = 0
-        total_records_processed = 0
-
-        # Main processing loop
-        for indicator in indicators_to_process:
-            indicator_success = True
-            indicator_records = 0
-
-            for date in date_range:
-                year, month = date.year, date.month
-
-                # Skip if data exists
-                if s3_manager.check_data_exists(indicator, year, month):
-                    logger.info(f"Data exists for {indicator} {year}-{month:02d}")
-                    continue
-
-                # Extract and process data
-                data = extractor.extract_data(
-                    indicator,
-                    f"{year}-{month:02d}-01",
-                    f"{year}-{month:02d}-28"
-                )
-
-                if data and data.get('observations'):
-                    success = processor.process_and_store_data(
-                        data['observations'],
-                        indicator,
-                        year,
-                        month
-                    )
-                    if success:
-                        indicator_records += len(data['observations'])
-                    else:
-                        indicator_success = False
-                else:
-                    indicator_success = False
-
-            # Update statistics
-            if indicator_success:
-                successful_indicators += 1
-                total_records_processed += indicator_records
-            else:
-                failed_indicators += 1
-
-        # Log final statistics
-        logger.info(
-            f"Job completed. "
-            f"Successfully processed: {successful_indicators}/{len(indicators_to_process)} indicators. "
-            f"Failed: {failed_indicators}/{len(indicators_to_process)}. "
-            f"Total records processed: {total_records_processed}"
-        )
-
-        job.commit()
-
+def write_data(df, output_path):
+    try:
+        df.coalesce(1).write.mode("overwrite").json(output_path)
+        logger.info(f"Data written to {output_path}.")
     except Exception as e:
-        logger.error(f"Job failed: {e}")
-        logger.error(traceback.format_exc())
-        sys.exit(1)
+        logger.error(f"Error writing data to S3: {e}")
 
-if __name__ == "__main__":
-    main()
+# Process the indicator
+logger.info(f"Processing indicator: {indicator}")
+api_data = fetch_data(indicator, api_key, observation_start_date, observation_end_date)
+
+if api_data:
+    transformed_data = transform_data(api_data, indicator)
+
+    if transformed_data:
+        df_new = spark.createDataFrame(transformed_data)
+
+        if not df_new.rdd.isEmpty():
+            year_months = df_new.select("observation_year", "observation_month").distinct().collect()
+
+            for row in year_months:
+                year = row["observation_year"]
+                month = row["observation_month"]
+
+                df_month = df_new.filter((col("observation_year") == year) & (col("observation_month") == month))
+
+                output_path = f"s3://{raw_data_bucket}/{target_path}/indicator={indicator}/year={year}/month={month}"
+                write_data(df_month, output_path)
+        else:
+            logger.warning(f"No data to write for {indicator} (DataFrame is empty).")
+    else:
+        logger.warning(f"No observations found or error during transform for {indicator} from {observation_start_date} to {observation_end_date}.")
+else:
+    logger.warning(f"No data returned from API for {indicator} from {observation_start_date} to {observation_end_date}.")
+
+job.commit()

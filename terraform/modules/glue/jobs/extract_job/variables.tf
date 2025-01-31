@@ -59,18 +59,6 @@ variable "fred_api_key" {
   sensitive = true
 }
 
-variable "observation_start_date" {
-  description = "Start date for FRED data extraction"
-  type = string
-  default = "2024-12-01"
-}
-
-variable "observation_end_date" {
-  description = "End date for FRED data extraction"
-  type = string
-  default = "2024-12-31"
-}
-
 variable "scripts_bucket_id" {
   description = "ID of the scripts S3 bucket"
   type        = string
@@ -89,10 +77,4 @@ variable "glue_access_policy" {
 variable "glue_role_arn" {
   description = "ARN of the Glue IAM role"
   type        = string
-}
-
-variable "indicator" {
-  description = "Optional comma-separated list of FRED indicators to process"
-  type        = string
-  default     = ""  # Empty string will process all indicators
 }
