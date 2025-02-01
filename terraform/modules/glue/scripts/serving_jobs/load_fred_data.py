@@ -2,7 +2,6 @@ import sys
 import logging
 import traceback
 from datetime import datetime
-import boto3
 from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
@@ -31,10 +30,46 @@ class SparkManager:
         self.job = Job(self.glueContext)
         self.job.init(args['JOB_NAME'], args)
 
+    def ensure_table_exists(self):
+        """Ensure the target table exists with the correct schema"""
+        create_table_sql = f"""
+        CREATE TABLE IF NOT EXISTS {self.args['TABLE_NAME']} (
+            indicator VARCHAR(255),
+            observation_year INTEGER,
+            observation_month INTEGER,
+            value DECIMAL(10,2),
+            observation_count INTEGER,
+            aggregation_timestamp TIMESTAMP,
+            load_timestamp TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (indicator, observation_year, observation_month)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_{self.args['TABLE_NAME']}_indicator
+            ON {self.args['TABLE_NAME']}(indicator);
+        CREATE INDEX IF NOT EXISTS idx_{self.args['TABLE_NAME']}_year_month
+            ON {self.args['TABLE_NAME']}(observation_year, observation_month);
+        """
+
+        try:
+            jvm = self.sc._jvm
+            DriverManager = jvm.java.sql.DriverManager
+            jdbc_url = f"jdbc:postgresql://{self.args['DB_HOST']}:{self.args['DB_PORT']}/{self.args['DB_NAME']}"
+            conn = DriverManager.getConnection(jdbc_url, self.args['DB_USER'], self.args['DB_PASSWORD'])
+            stmt = conn.createStatement()
+            stmt.execute(create_table_sql)
+            stmt.close()
+            conn.close()
+            self.logger.info("Table schema verified/created successfully")
+        except Exception as e:
+            self.logger.error(f"Error ensuring table exists: {str(e)}")
+            raise
+
     def read_indicator_data(self, indicator, year):
         """Reads indicator data from S3"""
         try:
-            input_path = f"s3://{self.args['SRC_BUCKET']}/aggregated_data/indicator={indicator}/observation_year={year}"
+            input_path = f"s3://{self.args['SRC_BUCKET']}/{self.args['SRC_PREFIX']}/indicator={indicator}/year={year}"
             self.logger.debug(f"Reading data from: {input_path}")
             return self.spark.read.parquet(input_path)
         except Exception as e:
@@ -78,17 +113,36 @@ class SparkManager:
                 indicator,
                 observation_year,
                 observation_month,
-                observation_value
+                value,
+                observation_count,
+                aggregation_timestamp,
+                load_timestamp,
+                created_at,
+                updated_at
             )
             SELECT
                 indicator,
                 observation_year,
                 observation_month,
-                observation_value
+                value,
+                observation_count,
+                aggregation_timestamp::timestamp,
+                '{datetime.now().isoformat()}'::timestamp as load_timestamp,
+                CURRENT_TIMESTAMP as created_at,
+                CURRENT_TIMESTAMP as updated_at
             FROM {temp_table}
             ON CONFLICT (indicator, observation_year, observation_month)
             DO UPDATE SET
-                observation_value = EXCLUDED.observation_value;
+                value = EXCLUDED.value,
+                observation_count = EXCLUDED.observation_count,
+                aggregation_timestamp = EXCLUDED.aggregation_timestamp,
+                load_timestamp = EXCLUDED.load_timestamp,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE (
+                {table_name}.value IS DISTINCT FROM EXCLUDED.value OR
+                {table_name}.observation_count IS DISTINCT FROM EXCLUDED.observation_count OR
+                {table_name}.aggregation_timestamp IS DISTINCT FROM EXCLUDED.aggregation_timestamp
+            );
             DROP TABLE IF EXISTS {temp_table};
             """
             stmt.execute(upsert_sql)
@@ -103,115 +157,79 @@ class SparkManager:
             self.logger.error(traceback.format_exc())
             raise
 
-class S3Manager:
-    def __init__(self, bucket, logger):
-        self.bucket = bucket
-        self.logger = logger
-        self.s3_client = boto3.client('s3')
-
-    def get_indicators(self, specific_indicator=None):
-        """Get list of indicators from S3"""
-        if specific_indicator:
-            return [specific_indicator]
-
-        try:
-            indicators = []
-            paginator = self.s3_client.get_paginator('list_objects_v2')
-            prefix = "aggregated_data/indicator="
-
-            for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix, Delimiter='/'):
-                if 'CommonPrefixes' in page:
-                    for prefix_obj in page['CommonPrefixes']:
-                        indicator = prefix_obj['Prefix'].split('=')[-1].rstrip('/')
-                        indicators.append(indicator)
-
-            self.logger.info(f"Found {len(indicators)} indicators")
-            return indicators
-
-        except Exception as e:
-            self.logger.error(f"Error fetching indicators: {str(e)}")
-            raise
-
 def get_year_range(start_year, end_year=None):
     """Generate list of years to process"""
     end_year = end_year or start_year
     return range(start_year, end_year + 1)
 
-def main():
-    logger = Logger.setup()
+logger = Logger.setup()
 
-    try:
-        # Get required parameters
-        args = getResolvedOptions(sys.argv, [
-            'JOB_NAME',
-            'SRC_BUCKET',
-            'START_YEAR',
-            'DB_HOST',
-            'DB_NAME',
-            'DB_USER',
-            'DB_PASSWORD',
-            'DB_PORT',
-            'TABLE_NAME'
-        ])
+try:
+    # Get required parameters
+    args = getResolvedOptions(sys.argv, [
+        'JOB_NAME',
+        'SRC_BUCKET',
+        'SRC_PREFIX',
+        'START_YEAR',
+        'END_YEAR',
+        'INDICATOR',
+        'DB_HOST',
+        'DB_NAME',
+        'DB_USER',
+        'DB_PASSWORD',
+        'DB_PORT',
+        'TABLE_NAME'
+    ])
 
-        # Initialize managers
-        spark_manager = SparkManager(args, logger)
-        s3_manager = S3Manager(args['SRC_BUCKET'], logger)
+    # Initialize spark manager
+    spark_manager = SparkManager(args, logger)
 
-        # Get optional parameters
-        start_year = int(args['START_YEAR'])
-        end_year = int(args.get('END_YEAR', start_year))
-        specific_indicator = args.get('INDICATOR')
+    # Ensure table exists with correct schema
+    spark_manager.ensure_table_exists()
 
-        # Get indicators and years to process
-        indicators = s3_manager.get_indicators(specific_indicator)
-        years = get_year_range(start_year, end_year)
+    # Get parameters
+    start_year = int(args['START_YEAR'])
+    end_year = int(args['END_YEAR'])
+    indicator = args['INDICATOR']
 
-        if not indicators:
-            raise ValueError("No indicators found in S3")
+    logger.info(f"Processing indicator {indicator} for years {start_year}-{end_year}")
 
-        logger.info(f"Processing {len(indicators)} indicators for years {start_year}-{end_year}")
+    # Process data
+    successful_loads = 0
+    failed_loads = 0
+    total_records = 0
 
-        # Process data
-        successful_loads = 0
-        failed_loads = 0
-        total_records = 0
+    for year in get_year_range(start_year, end_year):
+        try:
+            logger.info(f"Processing {indicator} for {year}")
+            df = spark_manager.read_indicator_data(indicator, year)
 
-        for indicator in indicators:
-            for year in years:
-                try:
-                    logger.info(f"Processing {indicator} for {year}")
-                    df = spark_manager.read_indicator_data(indicator, year)
+            if df is not None and df.count() > 0:
+                records = spark_manager.write_to_postgres(df, args['TABLE_NAME'])
+                total_records += records
+                successful_loads += 1
+                logger.info(f"Processed {records} records for {indicator} {year}")
+            else:
+                logger.warning(f"No data found for {indicator} {year}")
+                failed_loads += 1
 
-                    if df is not None and df.count() > 0:
-                        records = spark_manager.write_to_postgres(df, args['TABLE_NAME'])
-                        total_records += records
-                        successful_loads += 1
-                        logger.info(f"Processed {records} records for {indicator} {year}")
-                    else:
-                        logger.warning(f"No data found for {indicator} {year}")
-                        failed_loads += 1
+        except Exception as e:
+            failed_loads += 1
+            logger.error(f"Failed processing {indicator} {year}: {str(e)}")
+            continue
 
-                except Exception as e:
-                    failed_loads += 1
-                    logger.error(f"Failed processing {indicator} {year}: {str(e)}")
-                    continue
+    # Log results
+    total_years = len(list(get_year_range(start_year, end_year)))
+    logger.info(
+        f"Job completed: "
+        f"Successful: {successful_loads}/{total_years}, "
+        f"Failed: {failed_loads}/{total_years}, "
+        f"Total records: {total_records}"
+    )
 
-        # Log results
-        total_combinations = len(indicators) * len(list(years))
-        logger.info(
-            f"Job completed: "
-            f"Successful: {successful_loads}/{total_combinations}, "
-            f"Failed: {failed_loads}/{total_combinations}, "
-            f"Total records: {total_records}"
-        )
+    spark_manager.job.commit()
 
-        spark_manager.job.commit()
-
-    except Exception as e:
-        logger.error(f"Job failed: {str(e)}")
-        logger.error(traceback.format_exc())
-        sys.exit(1)
-
-if __name__ == "__main__":
-    main()
+except Exception as e:
+    logger.error(f"Job failed: {str(e)}")
+    logger.error(traceback.format_exc())
+    sys.exit(1)

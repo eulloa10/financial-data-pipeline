@@ -30,9 +30,6 @@ resource "aws_glue_job" "load_indicators_to_rds" {
   default_arguments = {
       "--SRC_BUCKET"      = "${var.project}-${var.data_lake_name}"
       "--SRC_PREFIX"      = "aggregated_data"
-      "--START_YEAR"      = var.start_year
-      "--END_YEAR"        = var.end_year    # Optional
-      "--INDICATOR"       = var.indicator   # Optional
       "--DB_HOST"         = var.db_host
       "--DB_NAME"         = var.db_name
       "--DB_USER"         = var.db_username
