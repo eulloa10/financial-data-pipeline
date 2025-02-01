@@ -14,9 +14,6 @@ resource "aws_glue_job" "fred_transform_etl_job" {
     "--SRC_PREFIX"      = "raw_data"
     "--DEST_BUCKET"     = "${var.project}-${var.data_lake_name}"
     "--DEST_PREFIX"     = "processed_data"
-    "--START_DATE"      = var.observation_start_date
-    "--END_DATE"        = var.observation_end_date
-    "--INDICATORS"       = var.indicator != "" ? var.indicator : " "  # Optional indicator parameter
   }
 
   execution_property {
