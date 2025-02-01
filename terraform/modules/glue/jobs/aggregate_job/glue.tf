@@ -14,10 +14,7 @@ resource "aws_glue_job" "fred_aggregate_etl_job" {
     "--SRC_PREFIX"     = "processed_data"
     "--DEST_BUCKET"     = "${var.project}-${var.data_lake_name}"
     "--DEST_PREFIX"     = "aggregated_data"
-    "--START_YEAR"      = var.observation_start_year
-    "--END_YEAR"        = var.observation_end_year
     "--API_KEY"         = var.fred_api_key
-    "--INDICATORS"      = " "
   }
 
   execution_property {
