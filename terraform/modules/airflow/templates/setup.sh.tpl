@@ -2,6 +2,21 @@
 set -e
 set -x
 
+SNS_TOPIC_ARN="${sns_topic_arn}"
+INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
+
+send_notification() {
+    local message="$1"
+    aws sns publish \
+        --region $REGION \
+        --topic-arn $SNS_TOPIC_ARN \
+        --message "$message" \
+        --subject "Airflow EC2 Status Update"
+}
+
+send_notification "EC2 instance $INSTANCE_ID is starting up"
+
 # Update and install necessary packages
 sudo yum update -y
 sudo amazon-linux-extras install docker -y
@@ -57,6 +72,11 @@ sudo docker-compose run --rm webserver airflow users create \
     --role Admin \
     --email ${airflow_admin_email}
 
+# Add AWS connection
+sudo docker-compose run --rm webserver airflow connections add 'aws_default' \
+    --conn-type 'aws' \
+    --conn-extra '{"region_name": "us-west-1"}'
+
 # Start Airflow services
 sudo docker-compose up -d
 
@@ -71,5 +91,11 @@ SYNC_SCRIPT
 
 chmod +x /home/ec2-user/airflow/sync_dags.sh
 nohup bash /home/ec2-user/airflow/sync_dags.sh >> /home/ec2-user/airflow/sync_dags.log 2>&1 &
+
+PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+send_notification "Airflow is ready on EC2 instance $INSTANCE_ID
+Webserver URL: http://$PUBLIC_IP:8080
+Username: ${airflow_admin_username}
+Instance started at: $(date)"
 
 echo "Airflow setup complete."

@@ -39,7 +39,7 @@ resource "aws_glue_job" "load_indicators_to_rds" {
   }
 
     execution_property {
-    max_concurrent_runs = 1
+    max_concurrent_runs = 5
   }
 
   worker_type  = var.worker_type

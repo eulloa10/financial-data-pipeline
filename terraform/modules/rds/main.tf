@@ -72,7 +72,11 @@ resource "aws_db_instance" "fred" {
   maintenance_window     = "Sun:05:00-Sun:06:00" # Sat 9:00 PM - 10:00 PM PST
   skip_final_snapshot = var.environment == "dev"
   delete_automated_backups = true
-  deletion_protection     = false  # For dev environment
+  deletion_protection     = true  # For dev environment
+
+  lifecycle {
+    prevent_destroy = true
+  }
   tags = {
     Name        = "${var.project}-${var.environment}-db"
     Environment = var.environment

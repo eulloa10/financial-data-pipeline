@@ -54,6 +54,16 @@ resource "aws_iam_role" "airflow_ec2_role" {
   tags = var.tags
 }
 
+resource "aws_sns_topic" "airflow_notifications" {
+  name = "${var.project}-airflow-notifications"
+}
+
+resource "aws_sns_topic_subscription" "airflow_email" {
+  topic_arn = aws_sns_topic.airflow_notifications.arn
+  protocol  = "email"
+  endpoint  = var.airflow_admin_email
+}
+
 resource "aws_iam_policy" "airflow_policy" {
   name        = "${var.name_prefix}-airflow-policy"
   description = "IAM policy for Airflow to access S3 and Glue"
@@ -65,7 +75,10 @@ resource "aws_iam_policy" "airflow_policy" {
         Effect   = "Allow"
         Action   = [
           "s3:GetObject",
-          "s3:ListBucket"
+          "s3:ListBucket",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:GetBucketLocation"
         ]
         Resource = [
           aws_s3_bucket.airflow_dags.arn,
@@ -105,6 +118,15 @@ resource "aws_iam_policy" "airflow_policy" {
           "ssm:GetAutomationExecution"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:Publish"
+        ]
+        Resource = [
+            aws_sns_topic.airflow_notifications.arn
+        ]
       }
     ]
   })
@@ -148,6 +170,7 @@ resource "aws_instance" "airflow_ec2" {
     airflow_admin_lastname  = var.airflow_admin_lastname
     airflow_admin_email     = var.airflow_admin_email
     aws_region             = var.region
+    sns_topic_arn          = aws_sns_topic.airflow_notifications.arn
     docker_compose_content = templatefile("${path.module}/templates/docker-compose.yml.tpl", {
       aws_region             = var.region
     })

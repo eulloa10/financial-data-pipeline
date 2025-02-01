@@ -22,3 +22,11 @@ output "airflow_url" {
   description = "URL to access the Airflow web UI"
   value       = "http://${aws_instance.airflow_ec2.public_ip}:8080"
 }
+
+output "dags_bucket_name" {
+  value = aws_s3_bucket.airflow_dags.id
+}
+
+output "dags_bucket_arn" {
+  value = aws_s3_bucket.airflow_dags.arn
+}

@@ -16,7 +16,7 @@ resource "aws_glue_job" "fred_ingestion_etl_job" {
   }
 
   execution_property {
-    max_concurrent_runs = 1
+    max_concurrent_runs = 5
   }
 
   timeout           = var.timeout

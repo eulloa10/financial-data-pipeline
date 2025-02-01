@@ -7,6 +7,16 @@ resource "aws_s3_bucket" "airflow_dags" {
   }
 }
 
+resource "aws_s3_object" "dag_files" {
+  for_each = fileset("${path.module}/dags/", "*.py")
+
+  bucket = aws_s3_bucket.airflow_dags.id
+  key    = "dags/${each.value}"
+  source = "${path.module}/dags/${each.value}"
+
+  etag = filemd5("${path.module}/dags/${each.value}")
+}
+
 resource "aws_s3_bucket_versioning" "airflow_dags" {
   bucket = aws_s3_bucket.airflow_dags.id
   versioning_configuration {
