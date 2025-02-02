@@ -50,6 +50,8 @@ with DAG(
     description='FRED Data Weekly ETL Pipeline',
     schedule_interval='30 0 * * 4',  # 4:30 PM PST Wednesday = 00:30 UTC Thursday
     catchup=False,
+    max_active_runs=2,
+    max_active_tasks=5,
     tags=['fred', 'etl', 'weekly']
 ) as dag:
 
@@ -74,8 +76,8 @@ with DAG(
             job_name='fred-fdp-transform-job',
             script_args={
                 '--INDICATOR': indicator,
-                '--START_YEAR': year,
-                '--END_YEAR': year
+                '--OBSERVATION_START_DATE': start_date,
+                '--OBSERVATION_END_DATE': end_date
             },
             aws_conn_id='aws_default',
             region_name='us-west-1',

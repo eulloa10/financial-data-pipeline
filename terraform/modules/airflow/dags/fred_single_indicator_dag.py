@@ -50,8 +50,8 @@ with DAG(
             job_name='fred-fdp-transform-job',
             script_args={
                 '--INDICATOR': indicator,
-                '--START_YEAR': '{{ dag_run.conf["start_year"] }}',
-                '--END_YEAR': '{{ dag_run.conf["end_year"] }}'
+                '--OBSERVATION_START_DATE': '{{ dag_run.conf["start_year"] }}-01-01',
+                '--OBSERVATION_END_DATE': '{{ dag_run.conf["end_year"] }}-12-31'
             },
             aws_conn_id='aws_default',
             region_name='us-west-1'

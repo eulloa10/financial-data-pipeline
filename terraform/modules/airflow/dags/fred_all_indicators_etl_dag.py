@@ -29,11 +29,13 @@ default_args = {
 }
 
 with DAG(
-    'fred_etl_pipeline',
+    'fred_all_indicators_etl',
     default_args=default_args,
     description='FRED Data ETL Pipeline',
     schedule_interval=None,  # Set to None so it only runs when triggered
-    catchup=False
+    catchup=False,
+    max_active_runs=2,
+    max_active_tasks=5
 ) as dag:
 
     # Get start and end year from DAG run configuration
@@ -62,8 +64,8 @@ with DAG(
             job_name='fred-fdp-transform-job',
             script_args={
                 '--INDICATOR': indicator,
-                '--START_YEAR': START_YEAR,
-                '--END_YEAR': END_YEAR
+                '--OBSERVATION_START_DATE': START_DATE,
+                '--OBSERVATION_END_DATE': END_DATE
             },
             aws_conn_id='aws_default',
             region_name='us-west-1',
