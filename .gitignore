@@ -3,7 +3,6 @@
 .env
 .autoenv*.zsh
 **/.env
-.env.*
 **/*.envrc
 
 # Airflow Configuration
