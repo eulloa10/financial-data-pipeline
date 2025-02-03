@@ -102,7 +102,7 @@ data "aws_iam_policy_document" "glue_access_policy" {
     resources = ["*"]
   }
 
-  # RDS Access (if needed for your load job)
+  # RDS Access
   statement {
     sid    = "AllowRDSAccess"
     effect = "Allow"
@@ -153,7 +153,7 @@ data "aws_iam_policy_document" "glue_access_policy" {
   }
 }
 
-# Optional: Additional policy for Secrets Manager if you're storing sensitive values
+# Optional: Additional policy for Secrets Manager if storing sensitive values
 data "aws_iam_policy_document" "secrets_access_policy" {
   statement {
     sid    = "AllowSecretsAccess"
@@ -166,38 +166,3 @@ data "aws_iam_policy_document" "secrets_access_policy" {
     ]
   }
 }
-
-# data "aws_iam_policy_document" "glue_base_policy" {
-#   statement {
-#     sid    = "AllowGlueToAssumeRole"
-#     effect = "Allow"
-
-#     principals {
-#       identifiers = ["glue.amazonaws.com"]
-#       type        = "Service"
-#     }
-
-#     actions = ["sts:AssumeRole"]
-#   }
-# }
-
-# data "aws_iam_policy_document" "glue_access_policy" {
-#   statement {
-#     sid    = "AllowGlueAccess"
-#     effect = "Allow"
-#     actions = [
-#       "s3:*",
-#       "glue:*",
-#       "iam:*",
-#       "logs:*",
-#       "cloudwatch:*",
-#       "sqs:*",
-#       "ec2:*",
-#       "rds:*",
-#       "cloudtrail:*"
-#     ]
-#     resources = [
-#       "*",
-#     ]
-#   }
-# }

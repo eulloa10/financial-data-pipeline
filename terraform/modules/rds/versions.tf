@@ -1,4 +1,3 @@
-# modules/rds/versions.tf
 terraform {
   required_providers {
     postgresql = {

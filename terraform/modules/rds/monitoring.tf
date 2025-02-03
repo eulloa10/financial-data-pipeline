@@ -1,16 +1,13 @@
-# SNS Topic for RDS notifications
 resource "aws_sns_topic" "fred_rds_events" {
   name = "${var.project}-fred_rds-events"
 }
 
-# SNS Topic subscription for email notifications
 resource "aws_sns_topic_subscription" "fred_rds_events_email" {
   topic_arn = aws_sns_topic.fred_rds_events.arn
   protocol  = "email"
   endpoint  = var.alert_email
 }
 
-# CloudWatch Event Rule for RDS state changes
 resource "aws_cloudwatch_event_rule" "rds_state_change" {
   name        = "${var.project}-rds-state-change"
   description = "Capture RDS state changes"
@@ -33,7 +30,6 @@ resource "aws_cloudwatch_event_rule" "rds_state_change" {
   }
 }
 
-# CloudWatch Event Target for RDS state changes
 resource "aws_cloudwatch_event_target" "rds_state_change" {
   rule      = aws_cloudwatch_event_rule.rds_state_change.name
   target_id = "SendToSNS"
@@ -49,7 +45,6 @@ resource "aws_cloudwatch_event_target" "rds_state_change" {
   }
 }
 
-# CloudWatch Alarms for monitoring RDS status
 resource "aws_cloudwatch_metric_alarm" "rds_status_check" {
   alarm_name          = "${var.project}-rds-status"
   comparison_operator = "GreaterThanThreshold"
@@ -67,7 +62,6 @@ resource "aws_cloudwatch_metric_alarm" "rds_status_check" {
   }
 }
 
-# CloudWatch Alarm for startup time
 resource "aws_cloudwatch_metric_alarm" "rds_startup_time" {
   alarm_name          = "${var.project}-rds-startup-time"
   comparison_operator = "GreaterThanThreshold"
@@ -85,7 +79,6 @@ resource "aws_cloudwatch_metric_alarm" "rds_startup_time" {
   }
 }
 
-# CloudWatch Dashboard for RDS monitoring
 resource "aws_cloudwatch_dashboard" "rds" {
   dashboard_name = "${var.project}-rds-monitoring"
 

@@ -31,7 +31,6 @@ resource "aws_s3_bucket_public_access_block" "scripts" {
   restrict_public_buckets = true
 }
 
-# IAM Role for Glue
 resource "aws_iam_role" "glue_role" {
   name               = "${var.project}-glue-role"
   assume_role_policy = data.aws_iam_policy_document.glue_base_policy.json

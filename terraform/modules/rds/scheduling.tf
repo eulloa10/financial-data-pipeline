@@ -46,7 +46,6 @@ resource "aws_cloudwatch_event_target" "stop_rds" {
   })
 }
 
-# IAM role for EventBridge
 resource "aws_iam_role" "eventbridge_role" {
   name = "${var.project}-rds-eventbridge-role"
 
@@ -64,7 +63,6 @@ resource "aws_iam_role" "eventbridge_role" {
   })
 }
 
-# IAM policy for EventBridge to control RDS
 resource "aws_iam_role_policy" "eventbridge_policy" {
   name = "${var.project}-rds-eventbridge-policy"
   role = aws_iam_role.eventbridge_role.id

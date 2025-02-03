@@ -83,7 +83,6 @@ with DAG(
             region_name='us-west-1'
         )
 
-    # Create tasks with static task_ids
     extract_task = create_extract_task('{{ dag_run.conf["indicator"] }}')
     transform_task = create_transform_task('{{ dag_run.conf["indicator"] }}')
     aggregate_task = create_aggregate_task('{{ dag_run.conf["indicator"] }}')

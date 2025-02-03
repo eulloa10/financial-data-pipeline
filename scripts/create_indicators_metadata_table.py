@@ -58,18 +58,15 @@ def insert_data(connection, data):
 def main():
     try:
         load_dotenv()
-        # Load data from JSON file
         with open('scripts/indicator_metadata.json', 'r') as f:
             data = json.load(f)
 
-        # Read environment variables
         rds_host = os.getenv('RDS_HOST')
         rds_user = os.getenv('RDS_USER')
         rds_password = os.getenv('RDS_PASSWORD')
         rds_port = os.getenv('RDS_PORT')
         rds_database = os.getenv('RDS_DATABASE')
 
-        # Connect to the database
         connection = psycopg2.connect(
             host=rds_host,
             user=rds_user,

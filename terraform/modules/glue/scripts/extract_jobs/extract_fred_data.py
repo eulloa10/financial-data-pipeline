@@ -42,7 +42,6 @@ logger.info(f"Observation start date: {observation_start_date}")
 logger.info(f"Observation end date: {observation_end_date}")
 logger.info(f"Indicator: {indicator}")
 
-# Function to fetch data from the API
 def fetch_data(indicator, api_key, start_date, end_date):
     base_url = "https://api.stlouisfed.org/fred/series/observations"
     params = {
@@ -63,7 +62,6 @@ def fetch_data(indicator, api_key, start_date, end_date):
         logger.error(f"Error fetching data for {indicator}: {e}")
         return None
 
-# Function to transform data into structured format
 def transform_data(data, indicator):
     logger.info(f"Transforming data for {indicator}")
     if data is None:
@@ -98,7 +96,6 @@ def write_data(df, output_path):
     except Exception as e:
         logger.error(f"Error writing data to S3: {e}")
 
-# Process the indicator
 logger.info(f"Processing indicator: {indicator}")
 api_data = fetch_data(indicator, api_key, observation_start_date, observation_end_date)
 

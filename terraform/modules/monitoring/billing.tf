@@ -1,16 +1,13 @@
-# SNS Topic for billing alerts
 resource "aws_sns_topic" "billing_alert" {
   name = "${var.project}-billing-alert"
 }
 
-# SNS Topic subscription (for email notifications)
 resource "aws_sns_topic_subscription" "billing_alert_email" {
   topic_arn = aws_sns_topic.billing_alert.arn
   protocol  = "email"
   endpoint  = var.alert_email
 }
 
-# CloudWatch billing alarm
 resource "aws_cloudwatch_metric_alarm" "billing_alarm" {
   alarm_name          = "${var.project}-billing-alarm"
   comparison_operator = "GreaterThanThreshold"
@@ -28,7 +25,6 @@ resource "aws_cloudwatch_metric_alarm" "billing_alarm" {
   }
 }
 
-# AWS Budget
 resource "aws_budgets_budget" "cost" {
   name              = "${var.project}-monthly-budget"
   budget_type       = "COST"

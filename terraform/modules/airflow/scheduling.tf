@@ -1,7 +1,5 @@
-# Get current AWS account ID
 data "aws_caller_identity" "current" {}
 
-# IAM role for EventBridge
 resource "aws_iam_role" "eventbridge_role" {
   name = "${var.project}-eventbridge-role"
 
@@ -21,7 +19,6 @@ resource "aws_iam_role" "eventbridge_role" {
   tags = var.tags
 }
 
-# IAM policy for EventBridge to control EC2
 resource "aws_iam_role_policy" "eventbridge_policy" {
   name = "${var.project}-eventbridge-policy"
   role = aws_iam_role.eventbridge_role.id
@@ -58,7 +55,6 @@ resource "aws_iam_role_policy" "eventbridge_policy" {
   })
 }
 
-# CloudWatch Event Rule to Start EC2 Instance
 resource "aws_cloudwatch_event_rule" "start_instance" {
   name                = "${var.project}-start-instance"
   description         = "Start EC2 instance before Wednesday DAG run (4 PM PST)"
@@ -67,7 +63,6 @@ resource "aws_cloudwatch_event_rule" "start_instance" {
   tags = var.tags
 }
 
-# CloudWatch Event Target to Start EC2 Instance
 resource "aws_cloudwatch_event_target" "start_instance" {
   rule      = aws_cloudwatch_event_rule.start_instance.name
   target_id = "StartEC2Instance"
@@ -80,7 +75,6 @@ resource "aws_cloudwatch_event_target" "start_instance" {
   })
 }
 
-# CloudWatch Event Rule to Stop EC2 Instance
 resource "aws_cloudwatch_event_rule" "stop_instance" {
   name                = "${var.project}-stop-instance"
   description         = "Stop EC2 instance after DAGs complete (10 PM PST)"
@@ -89,7 +83,6 @@ resource "aws_cloudwatch_event_rule" "stop_instance" {
   tags = var.tags
 }
 
-# CloudWatch Event Target to Stop EC2 Instance
 resource "aws_cloudwatch_event_target" "stop_instance" {
   rule      = aws_cloudwatch_event_rule.stop_instance.name
   target_id = "StopEC2Instance"

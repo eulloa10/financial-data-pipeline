@@ -1,4 +1,3 @@
-# dags/weekly_dynamic_dag.py
 from airflow import DAG
 from airflow.providers.amazon.aws.operators.glue import GlueJobOperator
 from airflow.utils.dates import days_ago
@@ -38,7 +37,6 @@ def get_current_month_range():
     # Get the last day of the current month
     _, last_day = calendar.monthrange(year, month)
 
-    # Format dates as strings
     start_date = f"{year}-{month:02d}-01"
     end_date = f"{year}-{month:02d}-{last_day}"
 
@@ -110,7 +108,6 @@ with DAG(
             dag=dag
         )
 
-        # Add logging for date range
         print(f"Processing {indicator} for period: {start_date} to {end_date}")
 
         extract_task >> transform_task >> aggregate_task >> load_task

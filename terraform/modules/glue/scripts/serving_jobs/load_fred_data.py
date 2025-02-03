@@ -87,7 +87,6 @@ class SparkManager:
             db_host = self.args['DB_HOST'].split(':')[0]  # Remove port if present
             jdbc_url = f"jdbc:postgresql://{db_host}:{self.args['DB_PORT']}/{self.args['DB_NAME']}"
 
-            # Write the DataFrame to a temporary table
             temp_table = f"{table_name}_temp"
 
             self.logger.info(f"Writing data to temporary table {temp_table}")
@@ -165,7 +164,6 @@ def get_year_range(start_year, end_year=None):
 logger = Logger.setup()
 
 try:
-    # Get required parameters
     args = getResolvedOptions(sys.argv, [
         'JOB_NAME',
         'SRC_BUCKET',
@@ -181,20 +179,16 @@ try:
         'TABLE_NAME'
     ])
 
-    # Initialize spark manager
     spark_manager = SparkManager(args, logger)
 
-    # Ensure table exists with correct schema
     spark_manager.ensure_table_exists()
 
-    # Get parameters
     start_year = int(args['START_YEAR'])
     end_year = int(args['END_YEAR'])
     indicator = args['INDICATOR']
 
     logger.info(f"Processing indicator {indicator} for years {start_year}-{end_year}")
 
-    # Process data
     successful_loads = 0
     failed_loads = 0
     total_records = 0
@@ -218,7 +212,6 @@ try:
             logger.error(f"Failed processing {indicator} {year}: {str(e)}")
             continue
 
-    # Log results
     total_years = len(list(get_year_range(start_year, end_year)))
     logger.info(
         f"Job completed: "

@@ -1,4 +1,3 @@
-# dags/fred_etl_dag.py
 from airflow import DAG
 from airflow.providers.amazon.aws.operators.glue import GlueJobOperator
 from airflow.utils.dates import days_ago
@@ -38,13 +37,11 @@ with DAG(
     max_active_tasks=5
 ) as dag:
 
-    # Get start and end year from DAG run configuration
     START_YEAR = "{{ dag_run.conf['start_year'] }}"
     END_YEAR = "{{ dag_run.conf['end_year'] }}"
     START_DATE = f"{START_YEAR}-01-01"
     END_DATE = f"{END_YEAR}-12-31"
 
-    # Create tasks for each indicator
     for indicator in INDICATORS:
         extract_task = GlueJobOperator(
             task_id=f'extract_{indicator}',
