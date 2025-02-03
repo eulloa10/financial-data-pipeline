@@ -1,0 +1,41 @@
+project             = "your_project_name" # Replace with a descriptive project name
+region              = "us-west-1" # Replace with your desired AWS region
+fred_api_key        = "YOUR_FRED_API_KEY" # Replace with your actual FRED API key
+environment         = "dev" # Or "prod", "staging", etc.
+vpc_cidr            = "10.0.0.0/16"
+
+# Airflow
+allowed_ips         = ["your_ip_goes_here/32"] # Replace with your actual IP address for Airflow access
+key_name            = "fred-airflow-key" # Replace with your EC2 key pair name
+airflow_instance_type = "t3.medium" # Adjust instance type as needed
+airflow_db_password   = "generate_a_strong_password" # Generate a strong password for the Airflow metadata database
+airflow_webserver_secret_key = "generate_a_secret_key" # Generate a secret key
+airflow_fernet_key    = "generate_a_fernet_key" # Generate a Fernet key (use `airflow fernet-key`)
+airflow_admin_username  = "admin" # Choose an admin username
+airflow_admin_firstname = "Admin" # Admin first name
+airflow_admin_lastname  = "User" # Admin last name
+airflow_admin_email     = "your_email@example.com" # Replace with your email
+airflow_admin_password  = "generate_a_strong_admin_password" # Generate a strong password for the Airflow admin user
+
+# RDS
+db_name             = "fred_data" # Choose a database name
+db_instance_class   = "db.t3.micro" # Adjust instance class as needed
+db_username         = "your_db_username" # Choose a database username
+db_password         = "generate_a_strong_db_password" # Generate a strong password for the RDS database
+allowed_rds_ips     = [
+    "your_ip_goes_here/32",
+    "35.161.45.11/32",
+    "52.32.136.34/32",
+    "54.244.23.85/32"
+    # Add other allowed IPs if needed
+]
+
+# Glue
+data_lake_name      = "fred-data-lake-your-project" # Replace with a unique S3 bucket name
+glue_scripts_bucket = "your-glue-scripts-bucket" # Replace with the name of your S3 bucket for Glue scripts
+python_version      = 3 # Or 3.9 depending on your Glue job requirements
+timeout             = 20 # Timeout for Glue jobs in minutes
+worker_type         = "G.1X" # Adjust worker type as needed
+
+# Monitoring
+alert_email = "your_email@example.com" # Replace with your email for alerts
