@@ -61,9 +61,10 @@ The core components of the project include:
 
 To run this project, you need the following:
 
-- **AWS Credentials:** Ensure you have configured your AWS credentials (access key ID and secret access key) with appropriate permissions to create the necessary resources (S3, RDS, Glue, EC2, CloudWatch, SNS). You can set these up using environment variables, the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) configuration, or an IAM role.
-- **Terraform:** Install Terraform on your local machine. See the [Terraform website](https://www.terraform.io/downloads) for installation instructions.
-- **Preset Account:** Create an account on [Preset's website](https://preset.io/). You'll need this to visualize the data.
+- **AWS Credentials:** Ensure you have configured your AWS credentials (access key ID and secret access key) with appropriate permissions to create the necessary resources (S3, RDS, Glue, EC2, CloudWatch, SNS). You can set these up using environment variables, the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) configuration, or an IAM role
+- **Terraform:** Install Terraform on your local machine. See the [Terraform website](https://www.terraform.io/downloads) for installation instructions
+- **Preset Account:** Create an account on [Preset's website](https://preset.io/). You'll need this to visualize the data
+- **FRED API Key:** Create an account on [FRED](https://fred.stlouisfed.org/docs/api/api_key.html) and request an API key
 
 ### Steps to Set Up
 
