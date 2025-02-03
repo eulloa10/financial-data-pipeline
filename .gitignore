@@ -110,6 +110,7 @@ celerybeat-schedule
 *.sage.py
 
 # dotenv & environment files
+!.env.example
 .env
 .autoenv*.zsh
 **/.env
