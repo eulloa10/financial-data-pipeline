@@ -1,3 +1,11 @@
+# dotenv & environment files
+!.env.example
+.env
+.autoenv*.zsh
+**/.env
+.env.*
+**/*.envrc
+
 # Airflow Configuration
 airflow.cfg
 airflow_login.py
@@ -108,14 +116,6 @@ celerybeat-schedule
 
 # SageMath parsed files
 *.sage.py
-
-# dotenv & environment files
-!.env.example
-.env
-.autoenv*.zsh
-**/.env
-.env.*
-**/*.envrc
 
 # Virtualenv directories
 .venv*
