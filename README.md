@@ -1,4 +1,6 @@
-# Automated Financial and Economic Indicator Dashboard using AWS and Preset
+# Automated Financial and Economic Indicator Dashboard using AWS, Airflow, Terraform and Looker Studio
+
+## [Live Looker Studio Report](https://lookerstudio.google.com/reporting/8a3e2e21-7502-4573-9bd3-34a732eb2d57)
 
 ## Background
 
@@ -23,13 +25,13 @@ Investors need quick access to key financial indicators without sifting through 
 
 ## Project Overview
 
-This project builds an automated data pipeline to track financial and economic indicators over time. The data is ingested from the [FRED API](https://fred.stlouisfed.org/docs/api/fred/), stored in an S3-based data lake, and then transformed across multiple layers (bronze, silver, gold). Finally, the transformed data is stored in an RDS database for analysis and reporting.  An interactive Preset dashboard visualizes key economic indicators, helping investors track trends and make data-driven decisions.
+This project builds an automated data pipeline to track financial and economic indicators over time. The data is ingested from the [FRED API](https://fred.stlouisfed.org/docs/api/fred/), stored in an S3-based data lake, and then transformed across multiple layers (bronze, silver, gold). Finally, the transformed data is stored in an RDS database for analysis and reporting.  An interactive Looker Studio dashboard visualizes key economic indicators, helping investors track trends and make data-driven decisions.
 
 The core components of the project include:
 - **Data Ingestion**: Fetching data from external APIs (FRED) and storing it in Amazon S3
 - **Data Transformation**: Using AWS Glue scripts to clean and prepare the data across the various layers of the data lake
 - **Data Storage**: Storing the transformed data in Amazon RDS for further analysis and reporting
-- **Dashboard**: Visualizing the financial indicators using Preset
+- **Dashboard**: Visualizing the financial indicators using Looker Studio
 - **Automation**: Managing the data pipeline and ensuring regular updates using Apache Airflow, running in a container on an EC2 instance
 - **Infrastructure as Code**: Automating the provisioning and management of AWS resources (S3, Glue, RDS, EC2) using Terraform.
 
@@ -44,7 +46,7 @@ The core components of the project include:
   - **EC2**: Hosts the Apache Airflow container for workflow orchestration and data pipeline management
   - **Cloudwatch**: Monitors EC2 and RDS instances, along with tracking billing metrics
   - **SNS**: Sends email alerts regarding the status of AWS resources
-- **Dashboard**: Apache Superset ([Preset](https://preset.io/)) for data visualization
+- **Dashboard**: Looker Studio for data visualization
 - **Infrastructure as Code**: Terraform for provisioning cloud resources
 
 ---
@@ -63,7 +65,7 @@ To run this project, you need the following:
 
 - **AWS Credentials:** Ensure you have configured your AWS credentials (access key ID and secret access key) with appropriate permissions to create the necessary resources (S3, RDS, Glue, EC2, CloudWatch, SNS). You can set these up using environment variables, the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) configuration, or an IAM role
 - **Terraform:** Install Terraform on your local machine. See the [Terraform website](https://www.terraform.io/downloads) for installation instructions
-- **Preset Account:** Create an account on [Preset's website](https://preset.io/). You'll need this to visualize the data
+- **Looker Studio Account:** Create an account on [Looker Studio](https://lookerstudio.google.com/). You'll need this to visualize the data
 - **FRED API Key:** Create an account on [FRED](https://fred.stlouisfed.org/docs/api/api_key.html) and request an API key
 
 ### Steps to Set Up
@@ -120,9 +122,9 @@ To run this project, you need the following:
       }
       ```
 
-5. **Preset Database Connection**:
+5. **Looker Studio Database Connection**:
 
-    - Log in to your Preset account and follow Preset's instructions to connect to your RDS PostgreSQL database. You'll need the RDS endpoint, database name, username, and password (which you configured through Terraform). This step is crucial and must be done after the DAGs have successfully run and populated the database.
+    - Log in to your Looker Studio account and follow [these](https://cloud.google.com/looker/docs/studio/connect-to-postgresql) instructions to connect to your RDS PostgreSQL database. Google's default PostgreSQL connector is not compatible with RDS, so you will likely need to use the SyncWith connector or an alternative PostgreSQL connector. You'll need the RDS endpoint, database name, username, and password (which you configured through Terraform). This step must be done after the DAGs have successfully run and populated the database.
 
 ---
 
@@ -131,7 +133,7 @@ To run this project, you need the following:
 Once the project is set up, you can perform the following tasks:
 
 - **Monitor the Pipeline**: Use Airflow to trigger and monitor the ETL pipeline and data transformations
-- **View Dashboards**: Access Preset to view trends for various financial indicators over time
-- **Generate Reports**: Configure Preset to run monthly reports and send them via email
+- **View Dashboards**: Create data visualizations in Looker Studio to view trends for various financial indicators over time
+- **Generate Reports**: Configure Looker Studio to run monthly reports and send them via email
 
 ---
