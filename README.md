@@ -1,4 +1,4 @@
-# Automated Financial and Economic Indicator Dashboard using AWS, Airflow, Terraform and Looker Studio
+# Automated Economic Indicator Dashboard using AWS, Airflow, Terraform and Looker Studio
 
 ## [Live Looker Studio Report](https://lookerstudio.google.com/reporting/8a3e2e21-7502-4573-9bd3-34a732eb2d57)
 
