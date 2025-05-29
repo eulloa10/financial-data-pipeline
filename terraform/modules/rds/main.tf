@@ -75,7 +75,7 @@ resource "aws_db_instance" "fred" {
   deletion_protection     = true  # For dev environment
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
   tags = {
     Name        = "${var.project}-${var.environment}-db"

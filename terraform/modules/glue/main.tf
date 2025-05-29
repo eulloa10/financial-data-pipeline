@@ -36,7 +36,7 @@ resource "aws_iam_role" "glue_role" {
   assume_role_policy = data.aws_iam_policy_document.glue_base_policy.json
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 }
 
